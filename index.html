@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Prompt Üretici</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Prompt">
+<style>
+:root{--bg:#faf6f3;--card:#fff;--tx:#241a1f;--mu:#7a6a72;--ac:#e0457b;--ac2:#fff;--bd:#eadfe3;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#17120f;--card:#231c20;--tx:#f5ecef;--mu:#a8979f;--ac:#ff6a9c;--ac2:#1a0f14;--bd:#3a2f35;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:16px/1.45 -apple-system,system-ui,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 12px}
+.tabs{display:flex;gap:8px;margin-bottom:6px}
+.tab{flex:1;padding:10px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:15px}
+.tab.on{background:var(--ac);color:var(--ac2);border-color:var(--ac)}
+label,.lb{display:block;font-size:13px;color:var(--mu);margin:14px 0 6px}
+textarea,input[type=text],input[type=password]{width:100%;padding:12px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font:16px/1.4 -apple-system,system-ui,sans-serif}
+textarea{min-height:96px;resize:vertical}
+textarea.sm{min-height:60px}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 14px;border-radius:999px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:15px}
+.chip.on{background:var(--ac);color:var(--ac2);border-color:var(--ac)}
+.chip.q{font-size:13px;padding:7px 11px}
+.go{width:100%;margin-top:18px;padding:15px;border:0;border-radius:14px;background:var(--ac);color:var(--ac2);font-size:17px;font-weight:600}
+.go:disabled{opacity:.5}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-top:14px}
+.card pre{white-space:pre-wrap;word-wrap:break-word;margin:0 0 10px;font:14px/1.5 ui-monospace,Menlo,monospace}
+.card b{display:block;font-size:12px;color:var(--mu);margin-bottom:6px}
+.btn{padding:8px 14px;border-radius:10px;border:1px solid var(--bd);background:transparent;color:var(--tx);font-size:14px}
+.btn.ac{background:var(--ac);color:var(--ac2);border-color:var(--ac)}
+.edit{margin-top:12px;display:none}
+.edit.open{display:block}
+.edit .row{margin-bottom:8px}
+.msg{color:var(--mu);margin-top:14px;font-size:14px;word-wrap:break-word}
+.hid{display:none}
+a{color:var(--ac)}
+</style>
+</head>
+<body>
+<main>
+<h1>Prompt Üretici</h1>
+<div class="tabs"><button class="tab on" id="t1">Üret</button><button class="tab" id="t2">Geçmiş (0)</button><button class="tab" id="t3">Ayarlar</button></div>
+
+<section id="v1">
+<label for="idea">Fikir (tek cümle yeterli)</label>
+<textarea id="idea" placeholder="örn. kırmızı saçlı kadın, pembe kabriyole, yaz öğleden sonrası"></textarea>
+<div class="lb">Stil şablonu</div><div class="row" id="styles"></div>
+<div class="lb">Hedef model</div><div class="row" id="models"></div>
+<div class="lb">Varyasyon sayısı</div><div class="row" id="counts"></div>
+<div class="lb">En-boy oranı</div><div class="row" id="ars"></div>
+<label for="fixed">Sabit kurallar (her prompt’a eklenir)</label>
+<textarea id="fixed" class="sm">Clean natural skin, no tattoos anywhere. Realistic skin texture. Adult subject.</textarea>
+<button class="go" id="go">Prompt üret</button>
+<div class="msg" id="msg"></div>
+<div id="out"></div>
+</section>
+
+<section id="v2" class="hid">
+<div class="row" style="margin-top:8px"><button class="btn" id="clr">Geçmişi temizle</button></div>
+<div id="hl"></div>
+</section>
+
+<section id="v3" class="hid">
+<div class="lb">Sağlayıcı</div><div class="row" id="provs"></div>
+<label for="key">API anahtarı</label>
+<input type="password" id="key" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Anahtarını buraya yapıştır">
+<label for="mdl">Model adı</label>
+<input type="text" id="mdl" autocapitalize="off" spellcheck="false">
+<button class="go" id="sv">Kaydet</button>
+<div class="msg" id="sm"></div>
+<div class="msg" id="help"></div>
+<div class="msg">Anahtar yalnızca bu cihazın tarayıcısında saklanır, sadece seçtiğin sağlayıcıya gönderilir.</div>
+</section>
+</main>
+
+<script>
+(function(){
+function $(id){return document.getElementById(id)}
+function mk(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+
+var PROV=[
+ {n:"Gemini (ücretsiz)",k:"gemini",m:"gemini-flash-latest",h:"Ücretsiz anahtar: aistudio.google.com/apikey adresine Google hesabınla gir, “Create API key”e dokun."},
+ {n:"Groq (ücretsiz)",k:"groq",m:"llama-3.3-70b-versatile",h:"Ücretsiz anahtar: console.groq.com/keys adresinden al."},
+ {n:"Claude API (ücretli)",k:"anthropic",m:"claude-sonnet-5-5",h:"Anahtar: console.anthropic.com. Kullanım ücretlidir."}
+];
+var CK="pu_cfg_v1",HK="pu_hist_v1";
+function jget(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}}
+function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+var cfg=jget(CK,{p:0,keys:{},models:{}});
+var hist=jget(HK,[]);if(!Array.isArray(hist))hist=[];
+
+var MODELS=[["Midjourney","Midjourney: end with parameters like --ar and --v 7. One flowing descriptive prompt, no markdown."],
+["Flux","Flux: one rich natural-language paragraph, no parameters, no tags, no --flags."],
+["Krea","Krea: one detailed natural-language paragraph, no --flags; mention aspect ratio in words."],
+["Genel","Generic: structured sections separated by blank lines, plus the aspect ratio at the end."]];
+var COUNTS=[1,3,5],ARS=["3:2","2:3","16:9","9:16","1:1"];
+var STY=[["Yok",""],
+["Barbiecore","Barbiecore and retro Palm Springs: bubblegum pink, hot magenta, glossy plastic textures, sunny playful mood."],
+["Film noir","Film noir: black and white, hard chiaroscuro lighting, venetian blind shadows, smoky haze, 1940s mood."],
+["Sinematik","Cinematic: anamorphic lens, shallow depth of field, teal and orange grade, fine film grain, dramatic composition."],
+["Altın saat","Golden hour: low warm sun, long shadows, soft lens flare, glowing rim light."],
+["80’ler neon","1980s synthwave: neon magenta and cyan, chrome, grid horizon, VHS grain."],
+["Analog film","Analog 35mm film look: Kodak Portra tones, soft grain, light leaks, slight vignette."],
+["Minimal stüdyo","Minimal studio: seamless pastel backdrop, soft diffused softbox light, clean editorial composition."]];
+var QUICK=["Daha sinematik yap","Daha sıcak tonlar","Işığı dramatikleştir","Daha kısa yaz","Daha detaylı yaz"];
+var st={m:0,c:1,a:0,s:0};
+
+function chips(id,items,key,label,after){
+  var el=$(id);el.textContent="";
+  items.forEach(function(it,i){
+    var b=mk("button","chip"+(st[key]===i?" on":""),label(it));
+    b.onclick=function(){st[key]=i;[].forEach.call(el.children,function(c,j){c.className="chip"+(j===i?" on":"")});if(after)after(i)};
+    el.appendChild(b);
+  });
+}
+chips("styles",STY,"s",function(x){return x[0]});
+chips("models",MODELS,"m",function(x){return x[0]});
+chips("counts",COUNTS,"c",function(x){return x+" adet"});
+chips("ars",ARS,"a",function(x){return x});
+
+var SYS="You write rich, photorealistic image-generation prompts in English. Expand the user’s short idea into a complete prompt using EXACTLY this section order, written as flowing prose paragraphs (no headings, no markdown):\n"+
+"1 Format and shot (orientation, photorealistic, camera angle, lens)\n2 Subject (hair, eyes, freckles, expression, gaze)\n3 Skin and hard constraints\n4 Accessories and jewelry\n5 Clothing, with fabric and color details\n6 Pose and action, including any foreground object and depth of field\n7 Setting and props, with left/right/foreground/background placement\n8 Lighting (direction, warmth, shadows, highlights)\n9 Color palette as a list of named colors\n10 Style (editorial look, lens, film grade, aesthetic, ultra-detailed, 8k) and aspect ratio.\n"+
+"Quality bar: be concrete and sensory, name materials, colors and positions, keep a consistent mood, and invent tasteful details the user did not mention. Subjects must be adults. Keep content tasteful.";
+
+/* tabs */
+function saveH(){jset(HK,hist.slice(0,60));$("t2").textContent="Geçmiş ("+hist.length+")"}
+$("t2").textContent="Geçmiş ("+hist.length+")";
+function tab(n){
+  ["v1","v2","v3"].forEach(function(v,i){$(v).className=(i+1===n)?"":"hid";$("t"+(i+1)).className="tab"+(i+1===n?" on":"")});
+  if(n===2)renderHist();
+}
+$("t1").onclick=function(){tab(1)};$("t2").onclick=function(){tab(2)};$("t3").onclick=function(){tab(3)};
+
+/* settings */
+function showProv(){
+  var p=PROV[cfg.p];
+  $("key").value=cfg.keys[p.k]||"";
+  $("mdl").value=cfg.models[p.k]||p.m;
+  $("help").textContent=p.h;
+}
+chips("provs",PROV,"p_dummy",function(x){return x.n},function(i){cfg.p=i;showProv()});
+(function(){var el=$("provs");[].forEach.call(el.children,function(c,j){c.className="chip"+(j===cfg.p?" on":"")})})();
+showProv();
+$("sv").onclick=function(){
+  var p=PROV[cfg.p];
+  cfg.keys[p.k]=$("key").value.trim();
+  cfg.models[p.k]=$("mdl").value.trim()||p.m;
+  jset(CK,cfg);$("sm").textContent="Kaydedildi. “Üret” sekmesine dönebilirsin.";
+};
+var NOKEY="Önce Ayarlar sekmesinden API anahtarını gir.";
+if(!(cfg.keys[PROV[cfg.p].k])){$("msg").textContent=NOKEY}
+
+/* LLM call */
+async function llm(prompt){
+  var p=PROV[cfg.p],key=cfg.keys[p.k],model=cfg.models[p.k]||p.m;
+  if(!key)throw new Error(NOKEY);
+  var url,opt;
+  if(p.k==="gemini"){
+    url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent";
+    opt={method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})};
+  }else if(p.k==="groq"){
+    url="https://api.groq.com/openai/v1/chat/completions";
+    opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:model,messages:[{role:"user",content:prompt}]})};
+  }else{
+    url="https://api.anthropic.com/v1/messages";
+    opt={method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:model,max_tokens:4000,messages:[{role:"user",content:prompt}]})};
+  }
+  var r=await fetch(url,opt),j=null;
+  try{j=await r.json()}catch(e){}
+  if(!r.ok){
+    var m=j&&(j.error&&(j.error.message||j.error)||j.message)||"";
+    throw new Error("HTTP "+r.status+(m?": "+(typeof m==="string"?m:JSON.stringify(m)):""));
+  }
+  var t="";
+  if(p.k==="gemini"){var ps=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts||[];t=ps.map(function(x){return x.text||""}).join("")}
+  else if(p.k==="groq"){t=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||""}
+  else{t=(j&&j.content||[]).map(function(x){return x.text||""}).join("")}
+  if(!t.trim())throw new Error("Boş cevap geldi");
+  return t;
+}
+
+function copy(t,btn){
+  function ok(){var o=btn.textContent;btn.textContent="Kopyalandı ✓";setTimeout(function(){btn.textContent=o},1400)}
+  function fb(){var a=document.createElement("textarea");a.value=t;a.style.position="fixed";a.style.opacity="0";document.body.appendChild(a);a.focus();a.select();a.setSelectionRange(0,99999);try{document.execCommand("copy");ok()}catch(e){}document.body.removeChild(a)}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,fb)}else fb();
+}
+
+function card(item,inHist){
+  var d=mk("div","card");
+  d.appendChild(mk("b",null,(item.idea?item.idea+" · ":"")+item.model+(item.style&&item.style!=="Yok"?" · "+item.style:"")));
+  var pre=mk("pre",null,item.text);d.appendChild(pre);
+  var r=mk("div","row");
+  var cp=mk("button","btn","Kopyala");cp.onclick=function(){copy(item.text,cp)};
+  var ed=mk("button","btn","Düzenle");
+  r.appendChild(cp);r.appendChild(ed);
+  if(inHist){var del=mk("button","btn","Sil");del.onclick=function(){hist=hist.filter(function(h){return h.id!==item.id});saveH();renderHist()};r.appendChild(del)}
+  d.appendChild(r);
+  var box=mk("div","edit"),qr=mk("div","row");
+  var inp=mk("input");inp.type="text";inp.placeholder="örn. biraz daha sinematik yap";
+  QUICK.forEach(function(q){var c=mk("button","chip q",q);c.onclick=function(){inp.value=q;apply()};qr.appendChild(c)});
+  box.appendChild(qr);box.appendChild(inp);
+  var ap=mk("button","btn ac","Uygula");ap.style.marginTop="8px";box.appendChild(ap);
+  var ms=mk("div","msg");ms.style.marginTop="8px";box.appendChild(ms);
+  d.appendChild(box);
+  ed.onclick=function(){box.className=box.className==="edit"?"edit open":"edit"};
+  async function apply(){
+    var cmd=inp.value.trim();if(!cmd)return;
+    ap.disabled=true;ms.textContent="Düzenleniyor…";
+    var p="Here is an image-generation prompt:\n\n"+item.text+"\n\nRewrite it applying this instruction (the user may write in Turkish): "+cmd+
+      "\n\nKeep the same structure, language (English), target format ("+item.model+"), and any hard constraints such as no tattoos. Change only what the instruction implies. Output ONLY the revised prompt, no preface.";
+    try{
+      var t=(await llm(p)).trim();
+      item.text=t;pre.textContent=t;
+      for(var i=0;i<hist.length;i++){if(hist[i].id===item.id)hist[i].text=t}
+      saveH();inp.value="";ms.textContent="Güncellendi.";
+    }catch(e){ms.textContent="Hata: "+e.message}
+    ap.disabled=false;
+  }
+  ap.onclick=apply;
+  return d;
+}
+function renderHist(){
+  var l=$("hl");l.textContent="";
+  if(!hist.length){l.appendChild(mk("div","msg","Henüz kayıtlı prompt yok."));return}
+  hist.forEach(function(h){l.appendChild(card(h,true))});
+}
+$("clr").onclick=function(){
+  var b=$("clr");
+  if(b.dataset.s==="1"){hist=[];saveH();renderHist();b.dataset.s="";b.textContent="Geçmişi temizle";return}
+  b.dataset.s="1";b.textContent="Emin misin? Tekrar dokun";
+  setTimeout(function(){b.dataset.s="";b.textContent="Geçmişi temizle"},3000);
+};
+
+function split(text){return text.split(/^\s*={3,}\s*$/m).map(function(s){return s.trim()}).filter(Boolean)}
+var go=$("go"),msg=$("msg");
+go.onclick=async function(){
+  var idea=$("idea").value.trim();
+  if(!idea){msg.textContent="Önce bir fikir yaz.";return}
+  if(!cfg.keys[PROV[cfg.p].k]){msg.textContent=NOKEY;return}
+  var n=COUNTS[st.c],ar=ARS[st.a],fixed=$("fixed").value.trim(),sty=STY[st.s];
+  var prompt=SYS+"\n\nTarget model: "+MODELS[st.m][1]+"\nAspect ratio: "+ar+
+    (sty[1]?"\nStyle template to apply throughout (lighting, palette, mood, grade): "+sty[1]:"")+
+    "\nAlways include these fixed rules naturally: "+fixed+
+    "\n\nUser idea (may be Turkish): "+idea+"\n\nWrite "+n+" distinct variation(s) (vary setting, outfit, lighting or palette while keeping the idea). Output ONLY the prompts, no preface. If more than one, separate them with a line containing only =====";
+  go.disabled=true;
+  var t0=Date.now(),tm=setInterval(function(){msg.textContent="Üretiliyor… "+Math.round((Date.now()-t0)/1000)+" sn"},500);
+  msg.textContent="Üretiliyor…";
+  try{
+    var parts=split(await llm(prompt));
+    var out=$("out");out.textContent="";
+    var items=parts.map(function(p,i){return{id:Date.now()+"-"+i,text:p,idea:idea,model:MODELS[st.m][0],style:sty[0]}});
+    items.slice().reverse().forEach(function(it){hist.unshift(it)});
+    saveH();
+    items.forEach(function(it){out.appendChild(card(it,false))});
+    msg.textContent="Hazır ve geçmişe kaydedildi.";
+  }catch(e){
+    msg.textContent="Hata: "+e.message;
+  }
+  clearInterval(tm);go.disabled=false;
+};
+})();
+</script>
+</body>
+</html>
