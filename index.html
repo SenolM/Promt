@@ -67,8 +67,10 @@ a{color:var(--ac)}
 
 <section id="v3" class="hid">
 <div class="lb">Sağlayıcı</div><div class="row" id="provs"></div>
-<label for="key">API anahtarı</label>
+<label for="key" id="keyl">API anahtarı</label>
 <input type="password" id="key" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Anahtarını buraya yapıştır">
+<label for="url" id="urll">Sunucu adresi</label>
+<input type="text" id="url" autocapitalize="off" spellcheck="false" placeholder="http://localhost:1234/v1">
 <label for="mdl">Model adı</label>
 <input type="text" id="mdl" autocapitalize="off" spellcheck="false">
 <button class="go" id="sv">Kaydet</button>
@@ -86,6 +88,7 @@ function mk(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cl
 var PROV=[
  {n:"Gemini (ücretsiz)",k:"gemini",m:"gemini-flash-latest",h:"Ücretsiz anahtar: aistudio.google.com/apikey adresine Google hesabınla gir, “Create API key”e dokun."},
  {n:"Groq (ücretsiz)",k:"groq",m:"llama-3.3-70b-versatile",h:"Ücretsiz anahtar: console.groq.com/keys adresinden al."},
+ {n:"LM Studio (yerel)",k:"lmstudio",m:"local-model",h:"LM Studio’da Developer sekmesinden sunucuyu başlat, CORS’u aç. Model adını sunucu ekranındaki model kimliğinden kopyala. Anahtar gerekmez."},
  {n:"Claude API (ücretli)",k:"anthropic",m:"claude-sonnet-5-5",h:"Anahtar: console.anthropic.com. Kullanım ücretlidir."}
 ];
 var CK="pu_cfg_v1",HK="pu_hist_v1";
@@ -138,13 +141,26 @@ function chips(id,items,key,label,after){
     el.appendChild(b);
   });
 }
-chips("styles",STY,"s",function(x){return x[0]});
+var NR=["Yağlıboya portre","Suluboya","Anime / Ghibli","Makoto Shinkai","3D Pixar","Comic / pop art"];
+var RULES_REAL="Clean natural skin, no tattoos anywhere. Realistic skin texture. Adult subject.";
+var RULES_STYL="No tattoos anywhere. Clean, smooth skin rendered in the style of this medium, no photographic skin pores. Adult subject.";
+var dirty=false;
+function isNR(i){return NR.indexOf(STY[i][0])>=0}
+chips("styles",STY,"s",function(x){return x[0]},function(i){if(!dirty)$("fixed").value=isNR(i)?RULES_STYL:RULES_REAL});
+$("fixed").addEventListener("input",function(){dirty=true});
+(function(){
+  var r=mk("div","row");r.style.marginTop="8px";
+  [["Gerçekçi kurallar",RULES_REAL],["Stilize kurallar",RULES_STYL],["Boş",""]].forEach(function(x){
+    var b=mk("button","chip q",x[0]);b.onclick=function(){$("fixed").value=x[1];dirty=true};r.appendChild(b);
+  });
+  $("fixed").parentNode.insertBefore(r,$("fixed").nextSibling);
+})();
 chips("models",MODELS,"m",function(x){return x[0]});
 chips("counts",COUNTS,"c",function(x){return x+" adet"});
 chips("ars",ARS,"a",function(x){return x});
 
-var SYS="You write rich, photorealistic image-generation prompts in English. Expand the user’s short idea into a complete prompt using EXACTLY this section order, written as flowing prose paragraphs (no headings, no markdown):\n"+
-"1 Format and shot (orientation, photorealistic, camera angle, lens)\n2 Subject (hair, eyes, freckles, expression, gaze)\n3 Skin and hard constraints\n4 Accessories and jewelry\n5 Clothing, with fabric and color details\n6 Pose and action, including any foreground object and depth of field\n7 Setting and props, with left/right/foreground/background placement\n8 Lighting (direction, warmth, shadows, highlights)\n9 Color palette as a list of named colors\n10 Style (editorial look, lens, film grade, aesthetic, ultra-detailed, 8k) and aspect ratio.\n"+
+var SYS="You write rich, detailed image-generation prompts in English (photorealistic by default). Expand the user’s short idea into a complete prompt using EXACTLY this section order, written as flowing prose paragraphs (no headings, no markdown):\n"+
+"1 Format and shot (orientation, medium or look, camera angle or composition, lens)\n2 Subject (hair, eyes, freckles, expression, gaze)\n3 Skin and hard constraints\n4 Accessories and jewelry\n5 Clothing, with fabric and color details\n6 Pose and action, including any foreground object and depth of field\n7 Setting and props, with left/right/foreground/background placement\n8 Lighting (direction, warmth, shadows, highlights)\n9 Color palette as a list of named colors\n10 Style (editorial look, lens, film grade, aesthetic, ultra-detailed, 8k) and aspect ratio.\n"+
 "Quality bar: be concrete and sensory, name materials, colors and positions, keep a consistent mood, and invent tasteful details the user did not mention. Subjects must be adults. Keep content tasteful.";
 
 /* tabs */
@@ -162,6 +178,10 @@ function showProv(){
   $("key").value=cfg.keys[p.k]||"";
   $("mdl").value=cfg.models[p.k]||p.m;
   $("help").textContent=p.h;
+  var loc=p.k==="lmstudio";
+  $("url").value=(cfg.urls&&cfg.urls[p.k])||"http://localhost:1234/v1";
+  $("url").style.display=loc?"":"none";$("urll").style.display=loc?"":"none";
+  $("key").style.display=loc?"none":"";$("keyl").style.display=loc?"none":"";
 }
 chips("provs",PROV,"p_dummy",function(x){return x.n},function(i){cfg.p=i;showProv()});
 (function(){var el=$("provs");[].forEach.call(el.children,function(c,j){c.className="chip"+(j===cfg.p?" on":"")})})();
@@ -170,19 +190,23 @@ $("sv").onclick=function(){
   var p=PROV[cfg.p];
   cfg.keys[p.k]=$("key").value.trim();
   cfg.models[p.k]=$("mdl").value.trim()||p.m;
+  if(p.k==="lmstudio"){cfg.urls=cfg.urls||{};cfg.urls[p.k]=$("url").value.trim().replace(/\/+$/,"")||"http://localhost:1234/v1"}
   jset(CK,cfg);$("sm").textContent="Kaydedildi. “Üret” sekmesine dönebilirsin.";
 };
 var NOKEY="Önce Ayarlar sekmesinden API anahtarını gir.";
-if(!(cfg.keys[PROV[cfg.p].k])){$("msg").textContent=NOKEY}
+if(!(cfg.keys[PROV[cfg.p].k])&&PROV[cfg.p].k!=="lmstudio"){$("msg").textContent=NOKEY}
 
 /* LLM call */
 async function llm(prompt){
   var p=PROV[cfg.p],key=cfg.keys[p.k],model=cfg.models[p.k]||p.m;
-  if(!key)throw new Error(NOKEY);
+  if(!key&&p.k!=="lmstudio")throw new Error(NOKEY);
   var url,opt;
   if(p.k==="gemini"){
     url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent";
     opt={method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})};
+  }else if(p.k==="lmstudio"){
+    url=((cfg.urls&&cfg.urls[p.k])||"http://localhost:1234/v1")+"/chat/completions";
+    opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+(key||"lm-studio")},body:JSON.stringify({model:model,messages:[{role:"user",content:prompt}],temperature:0.8})};
   }else if(p.k==="groq"){
     url="https://api.groq.com/openai/v1/chat/completions";
     opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:model,messages:[{role:"user",content:prompt}]})};
@@ -190,7 +214,10 @@ async function llm(prompt){
     url="https://api.anthropic.com/v1/messages";
     opt={method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:model,max_tokens:4000,messages:[{role:"user",content:prompt}]})};
   }
-  var r=await fetch(url,opt),j=null;
+  var r,j=null;
+  try{r=await fetch(url,opt)}catch(e){
+    throw new Error(p.k==="lmstudio"?"Sunucuya ulaşılamadı. LM Studio sunucusu açık mı, CORS açık mı, adres doğru mu?":"Bağlantı hatası: "+e.message);
+  }
   try{j=await r.json()}catch(e){}
   if(!r.ok){
     var m=j&&(j.error&&(j.error.message||j.error)||j.message)||"";
@@ -198,7 +225,7 @@ async function llm(prompt){
   }
   var t="";
   if(p.k==="gemini"){var ps=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts||[];t=ps.map(function(x){return x.text||""}).join("")}
-  else if(p.k==="groq"){t=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||""}
+  else if(p.k==="groq"||p.k==="lmstudio"){t=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||""}
   else{t=(j&&j.content||[]).map(function(x){return x.text||""}).join("")}
   if(!t.trim())throw new Error("Boş cevap geldi");
   return t;
@@ -261,10 +288,11 @@ var go=$("go"),msg=$("msg");
 go.onclick=async function(){
   var idea=$("idea").value.trim();
   if(!idea){msg.textContent="Önce bir fikir yaz.";return}
-  if(!cfg.keys[PROV[cfg.p].k]){msg.textContent=NOKEY;return}
+  if(!cfg.keys[PROV[cfg.p].k]&&PROV[cfg.p].k!=="lmstudio"){msg.textContent=NOKEY;return}
   var n=COUNTS[st.c],ar=ARS[st.a],fixed=$("fixed").value.trim(),sty=STY[st.s];
   var prompt=SYS+"\n\nTarget model: "+MODELS[st.m][1]+"\nAspect ratio: "+ar+
     (sty[1]?"\nStyle template to apply throughout (lighting, palette, mood, grade): "+sty[1]:"")+
+    (isNR(st.s)?"\nIMPORTANT: this is NOT photorealistic. Ignore any wording in the structure about photorealism, camera lens, film grade or real skin texture. Describe everything in the medium of the chosen style (painted, drawn or animated), and replace lens and camera details with composition and rendering details. Do not use the words photorealistic, photograph, 35mm or 8k.":"")+
     "\nAlways include these fixed rules naturally: "+fixed+
     "\n\nUser idea (may be Turkish): "+idea+"\n\nWrite "+n+" distinct variation(s) (vary setting, outfit, lighting or palette while keeping the idea). Output ONLY the prompts, no preface. If more than one, separate them with a line containing only =====";
   go.disabled=true;
