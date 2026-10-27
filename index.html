@@ -167,7 +167,7 @@ chips("ars",ARS,"a",function(x){return x});
 
 var SYS="You write rich, detailed image-generation prompts in English (photorealistic by default). Expand the user’s short idea into a complete prompt using EXACTLY this section order, written as flowing prose paragraphs (no headings, no markdown):\n"+
 "1 Format and shot (orientation, medium or look, camera angle or composition, lens)\n2 Subject (hair, eyes, freckles, expression, gaze)\n3 Skin and hard constraints\n4 Accessories and jewelry\n5 Clothing, with fabric and color details\n6 Pose and action, including any foreground object and depth of field\n7 Setting and props, with left/right/foreground/background placement\n8 Lighting (direction, warmth, shadows, highlights)\n9 Color palette as a list of named colors\n10 Style (editorial look, lens, film grade, aesthetic, ultra-detailed, 8k) and aspect ratio.\n"+
-"Quality bar: be concrete and sensory, name materials, colors and positions, keep a consistent mood, and invent tasteful details the user did not mention. Subjects must be adults. Keep content tasteful.";
+"Quality bar: be concrete and sensory, name materials, colors and positions, keep a consistent mood, and invent tasteful details only for what the user left open. Every explicit detail the user gives (clothing, legwear, footwear, pose, framing, aspect ratio) is mandatory: include it exactly as stated and never replace, soften or omit it. Subjects must be adults. Keep content tasteful.";
 
 /* tabs */
 function saveH(){jset(HK,hist.slice(0,60));$("t2").textContent="Geçmiş ("+hist.length+")"}
