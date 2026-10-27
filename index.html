@@ -49,6 +49,10 @@ a{color:var(--ac)}
 <section id="v1">
 <label for="idea">Fikir (tek cümle yeterli)</label>
 <textarea id="idea" placeholder="örn. kırmızı saçlı kadın, pembe kabriyole, yaz öğleden sonrası"></textarea>
+<div class="lb">Referans görsel (opsiyonel)</div>
+<div class="row"><button class="btn" id="pick" type="button">Görsel seç</button></div>
+<input type="file" id="file" accept="image/*" class="hid">
+<div id="refbox" style="display:none"><img id="thumb" alt="" style="max-width:100%;max-height:200px;border-radius:12px;margin-top:10px;display:block"><div class="row" style="margin-top:8px"><button class="btn" id="rm" type="button">Kaldır</button></div><div class="lb">Referans nasıl kullanılsın?</div><div class="row" id="refmodes"></div></div>
 <div class="lb">Stil şablonu</div><div class="row" id="styles"></div>
 <div class="lb">Hedef model</div><div class="row" id="models"></div>
 <div class="lb">Varyasyon sayısı</div><div class="row" id="counts"></div>
@@ -73,6 +77,8 @@ a{color:var(--ac)}
 <input type="text" id="url" autocapitalize="off" spellcheck="false" placeholder="http://localhost:1234/v1">
 <label for="mdl">Model adı</label>
 <input type="text" id="mdl" autocapitalize="off" spellcheck="false">
+<label for="vmdl">Görsel model adı (opsiyonel, boşsa yukarıdaki kullanılır)</label>
+<input type="text" id="vmdl" autocapitalize="off" spellcheck="false">
 <button class="go" id="sv">Kaydet</button>
 <div class="msg" id="sm"></div>
 <div class="msg" id="help"></div>
@@ -87,7 +93,7 @@ function mk(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cl
 
 var PROV=[
  {n:"Gemini (ücretsiz)",k:"gemini",m:"gemini-flash-latest",h:"Ücretsiz anahtar: aistudio.google.com/apikey adresine Google hesabınla gir, “Create API key”e dokun."},
- {n:"Groq (ücretsiz)",k:"groq",m:"llama-3.3-70b-versatile",h:"Ücretsiz anahtar: console.groq.com/keys adresinden al."},
+ {n:"Groq (ücretsiz)",k:"groq",m:"llama-3.3-70b-versatile",v:"meta-llama/llama-4-scout-17b-16e-instruct",h:"Ücretsiz anahtar: console.groq.com/keys adresinden al."},
  {n:"LM Studio (yerel)",k:"lmstudio",m:"local-model",h:"LM Studio’da Developer sekmesinden sunucuyu başlat, CORS’u aç. Model adını sunucu ekranındaki model kimliğinden kopyala. Anahtar gerekmez."},
  {n:"Claude API (ücretli)",k:"anthropic",m:"claude-sonnet-5-5",h:"Anahtar: console.anthropic.com. Kullanım ücretlidir."}
 ];
@@ -131,7 +137,7 @@ var STY=[["Yok",""],
 ["Pastel rüya","Pastel dreamcore: hazy soft glow, bloom around highlights, pastel pink, lavender and sky blue, ethereal floating dreamlike mood."],
 ["Lüks ürün","Luxury product photography: dark glossy surface, sharp rim lighting, specular highlights, reflections, premium minimal composition."]];
 var QUICK=["Daha sinematik yap","Daha sıcak tonlar","Işığı dramatikleştir","Daha kısa yaz","Daha detaylı yaz"];
-var st={m:0,c:1,a:0,s:0};
+var st={m:0,c:1,a:0,s:0,r:0};
 
 function chips(id,items,key,label,after){
   var el=$(id);el.textContent="";
@@ -178,6 +184,7 @@ function showProv(){
   $("key").value=cfg.keys[p.k]||"";
   $("mdl").value=cfg.models[p.k]||p.m;
   $("help").textContent=p.h;
+  $("vmdl").value=(cfg.vmodels&&cfg.vmodels[p.k])||"";$("vmdl").placeholder=p.v||"boş bırakabilirsin";
   var loc=p.k==="lmstudio";
   $("url").value=(cfg.urls&&cfg.urls[p.k])||"http://localhost:1234/v1";
   $("url").style.display=loc?"":"none";$("urll").style.display=loc?"":"none";
@@ -190,6 +197,7 @@ $("sv").onclick=function(){
   var p=PROV[cfg.p];
   cfg.keys[p.k]=$("key").value.trim();
   cfg.models[p.k]=$("mdl").value.trim()||p.m;
+  cfg.vmodels=cfg.vmodels||{};cfg.vmodels[p.k]=$("vmdl").value.trim();
   if(p.k==="lmstudio"){cfg.urls=cfg.urls||{};cfg.urls[p.k]=$("url").value.trim().replace(/\/+$/,"")||"http://localhost:1234/v1"}
   jset(CK,cfg);$("sm").textContent="Kaydedildi. “Üret” sekmesine dönebilirsin.";
 };
@@ -197,27 +205,32 @@ var NOKEY="Önce Ayarlar sekmesinden API anahtarını gir.";
 if(!(cfg.keys[PROV[cfg.p].k])&&PROV[cfg.p].k!=="lmstudio"){$("msg").textContent=NOKEY}
 
 /* LLM call */
-async function llm(prompt){
+async function llm(prompt,img){
   var p=PROV[cfg.p],key=cfg.keys[p.k],model=cfg.models[p.k]||p.m;
   if(!key&&p.k!=="lmstudio")throw new Error(NOKEY);
+  var b64=img?img.split(",")[1]:null;
+  if(img){model=(cfg.vmodels&&cfg.vmodels[p.k])||p.v||model}
+  var oc=img?[{type:"text",text:prompt},{type:"image_url",image_url:{url:img}}]:prompt;
+  var ac=img?[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},{type:"text",text:prompt}]:prompt;
   var url,opt;
   if(p.k==="gemini"){
     url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent";
-    opt={method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})};
+    opt={method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify({contents:[{parts:img?[{text:prompt},{inline_data:{mime_type:"image/jpeg",data:b64}}]:[{text:prompt}]}]})};
   }else if(p.k==="lmstudio"){
     url=((cfg.urls&&cfg.urls[p.k])||"http://localhost:1234/v1")+"/chat/completions";
-    opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+(key||"lm-studio")},body:JSON.stringify({model:model,messages:[{role:"user",content:prompt}],temperature:0.8})};
+    opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+(key||"lm-studio")},body:JSON.stringify({model:model,messages:[{role:"user",content:oc}],temperature:0.8})};
   }else if(p.k==="groq"){
     url="https://api.groq.com/openai/v1/chat/completions";
-    opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:model,messages:[{role:"user",content:prompt}]})};
+    opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:model,messages:[{role:"user",content:oc}]})};
   }else{
     url="https://api.anthropic.com/v1/messages";
-    opt={method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:model,max_tokens:4000,messages:[{role:"user",content:prompt}]})};
+    opt={method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:model,max_tokens:4000,messages:[{role:"user",content:ac}]})};
   }
   var r,j=null;
   try{r=await fetch(url,opt)}catch(e){
     throw new Error(p.k==="lmstudio"?"Sunucuya ulaşılamadı. LM Studio sunucusu açık mı, CORS açık mı, adres doğru mu?":"Bağlantı hatası: "+e.message);
   }
+  if(r.status===503){await new Promise(function(z){setTimeout(z,4000)});try{r=await fetch(url,opt)}catch(e){}}
   try{j=await r.json()}catch(e){}
   if(!r.ok){
     var m=j&&(j.error&&(j.error.message||j.error)||j.message)||"";
@@ -283,6 +296,25 @@ $("clr").onclick=function(){
   setTimeout(function(){b.dataset.s="";b.textContent="Geçmişi temizle"},3000);
 };
 
+var refImg=null,refMode=0;
+var REFMODES=[["Benzer yap","Use the reference as the main basis: keep its subject type, composition, palette and lighting, and apply the user’s idea as the changes."],
+["Sadece stil","Take only the style, palette, lighting and mood from the reference; the subject and scene come from the user’s idea."],
+["Sadece poz / kompozisyon","Take only the pose, framing and composition from the reference; everything else comes from the user’s idea and the chosen style."]];
+chips("refmodes",REFMODES,"r",function(x){return x[0]},function(i){refMode=i});
+$("pick").onclick=function(){$("file").click()};
+$("file").onchange=function(){
+  var f=this.files&&this.files[0],inp=this;if(!f)return;
+  var u=URL.createObjectURL(f),im=new Image();
+  im.onload=function(){
+    var M=1024,w=im.naturalWidth,h=im.naturalHeight,k=Math.min(1,M/Math.max(w,h));
+    var c=document.createElement("canvas");c.width=Math.round(w*k);c.height=Math.round(h*k);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    refImg=c.toDataURL("image/jpeg",0.85);$("thumb").src=refImg;$("refbox").style.display="";URL.revokeObjectURL(u);
+  };
+  im.onerror=function(){$("msg").textContent="Görsel okunamadı. JPG veya PNG dene."};
+  im.src=u;inp.value="";
+};
+$("rm").onclick=function(){refImg=null;$("refbox").style.display="none"};
 function split(text){return text.split(/^\s*={3,}\s*$/m).map(function(s){return s.trim()}).filter(Boolean)}
 var go=$("go"),msg=$("msg");
 go.onclick=async function(){
@@ -294,14 +326,17 @@ go.onclick=async function(){
     (sty[1]?"\nStyle template to apply throughout (lighting, palette, mood, grade): "+sty[1]:"")+
     (isNR(st.s)?"\nIMPORTANT: this is NOT photorealistic. Ignore any wording in the structure about photorealism, camera lens, film grade or real skin texture. Describe everything in the medium of the chosen style (painted, drawn or animated), and replace lens and camera details with composition and rendering details. Do not use the words photorealistic, photograph, 35mm or 8k.":"")+
     "\nAlways include these fixed rules naturally: "+fixed+
+    (refImg?"\n\nREFERENCE IMAGE ATTACHED. "+REFMODES[refMode][1]+" Study the image carefully. Never identify or name any real person; describe only visible features and treat any subject as a fictional adult. If the person in the reference appears to be a minor, output exactly: REFERANS UYGUN DEĞİL":"")+
     "\n\nUser idea (may be Turkish): "+idea+"\n\nWrite "+n+" distinct variation(s) (vary setting, outfit, lighting or palette while keeping the idea). Output ONLY the prompts, no preface. If more than one, separate them with a line containing only =====";
   go.disabled=true;
   var t0=Date.now(),tm=setInterval(function(){msg.textContent="Üretiliyor… "+Math.round((Date.now()-t0)/1000)+" sn"},500);
   msg.textContent="Üretiliyor…";
   try{
-    var parts=split(await llm(prompt));
+    var raw=await llm(prompt,refImg);
+    if(raw.indexOf("REFERANS UYGUN DEĞİL")>=0){throw new Error("Bu referans görsel kullanılamaz.")}
+    var parts=split(raw);
     var out=$("out");out.textContent="";
-    var items=parts.map(function(p,i){return{id:Date.now()+"-"+i,text:p,idea:idea,model:MODELS[st.m][0],style:sty[0]}});
+    var items=parts.map(function(p,i){return{id:Date.now()+"-"+i,text:p,idea:idea+(refImg?" (+görsel)":""),model:MODELS[st.m][0],style:sty[0]}});
     items.slice().reverse().forEach(function(it){hist.unshift(it)});
     saveH();
     items.forEach(function(it){out.appendChild(card(it,false))});
