@@ -39,7 +39,7 @@ textarea.sm{min-height:60px}
 .edit.open{display:block}
 .edit .row{margin-bottom:8px}
 .msg{color:var(--mu);margin-top:14px;font-size:14px;word-wrap:break-word}
-.hid{display:none}
+.hid{position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}
 #styles{max-height:168px;overflow-y:auto;padding:2px}
 </style>
 </head>
@@ -144,7 +144,8 @@ var PROV=[
  {n:"Groq (ücretsiz)",k:"groq",m:"llama-3.3-70b-versatile",h:"Ücretsiz anahtar: console.groq.com/keys adresinden al."},
  {n:"LM Studio (yerel)",k:"lmstudio",m:"local-model",h:"LM Studio’da Developer sekmesinden sunucuyu başlat, CORS’u aç. Model adını sunucu ekranındaki model kimliğinden kopyala. Anahtar gerekmez."},
  {n:"Claude API (ücretli)",k:"anthropic",m:"claude-sonnet-5-5",h:"Anahtar: console.anthropic.com. Kullanım ücretlidir."},
- {n:"OpenRouter",k:"openrouter",m:"openrouter/free",h:"Anahtar: openrouter.ai/keys. Varsayılan openrouter/free (Free Models Router) ücretsiz modeller arasından kendisi seçer. Belirli bir model istersen openrouter.ai/models sayfasındaki kimliği aynen yaz (ücretsiz sürümler :free ile biter)."}
+ {n:"OpenRouter",k:"openrouter",m:"openrouter/free",h:"Anahtar: openrouter.ai/keys. Varsayılan openrouter/free (Free Models Router) ücretsiz modeller arasından kendisi seçer. Belirli bir model istersen openrouter.ai/models sayfasındaki kimliği aynen yaz (ücretsiz sürümler :free ile biter)."},
+ {n:"EVREN",k:"evren",m:"qwen2.5-72b-instruct",h:"Anahtar: evren.ssyz.org.tr adresinde hesap oluşturup API anahtarını al. Sunucu adresi varsayılan olarak https://evren.ssyz.org.tr/api/v1 olarak ayarlıdır; değiştirmek istersen aşağıdan düzenle. Desteklenen model adlarını platformdaki Soru Panosu'ndan öğrenebilirsin."}
 ];
 var CK="pu_cfg_v1",HK="vp_hist_v1";
 function jget(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}}
@@ -392,7 +393,7 @@ $("file").onchange=function(){
     var M=1024,w=im.naturalWidth,h=im.naturalHeight,k=Math.min(1,M/Math.max(w,h));
     var c=document.createElement("canvas");c.width=Math.round(w*k);c.height=Math.round(h*k);
     c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-    refImg=c.toDataURL("image/jpeg",0.85);$("thumb").src=refImg;$("refbox").style.display="";URL.revokeObjectURL(u);
+    var du=c.toDataURL("image/jpeg",0.85);refImg={m:"image/jpeg",d:du.split(",")[1]};$("thumb").src=du;$("refbox").style.display="";URL.revokeObjectURL(u);
   };
   im.onerror=function(){$("msg").textContent="Görsel okunamadı. JPG veya PNG dene."};
   im.src=u;inp.value="";
@@ -473,6 +474,9 @@ async function llm0(prompt,img,signal){
   }else if(p.k==="groq"){
     url="https://api.groq.com/openai/v1/chat/completions";
     opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:model,messages:[{role:"user",content:msgc(prompt,img)}]})};
+  }else if(p.k==="evren"){
+    url=((cfg.urls&&cfg.urls[p.k])||"https://evren.ssyz.org.tr/api/v1")+"/chat/completions";
+    opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:model,messages:[{role:"user",content:msgc(prompt,img)}],temperature:0.8})};
   }else{
     url="https://api.anthropic.com/v1/messages";
     opt={method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:model,max_tokens:6000,messages:[{role:"user",content:img?[{type:"image",source:{type:"base64",media_type:img.m,data:img.d}},{type:"text",text:prompt}]:prompt}]})};
@@ -613,9 +617,10 @@ function showProv(){
   $("key").value=cfg.keys[p.k]||"";
   $("mdl").value=cfg.models[p.k]||p.m;
   $("help").textContent=p.h;
-  var loc=p.k==="lmstudio";
-  $("url").value=(cfg.urls&&cfg.urls[p.k])||"http://localhost:1234/v1";
-  sh("url",loc);sh("urll",loc);sh("key",!loc);sh("keyl",!loc);
+  var loc=p.k==="lmstudio"||p.k==="evren";
+  var defUrl=p.k==="evren"?"https://evren.ssyz.org.tr/api/v1":"http://localhost:1234/v1";
+  $("url").value=(cfg.urls&&cfg.urls[p.k])||defUrl;
+  sh("url",loc);sh("urll",loc);sh("key",true);sh("keyl",true);
 }
 chips("provs",PROV,"p_dummy",function(x){return x.n},function(i){cfg.p=i;showProv()});
 (function(){[].forEach.call($("provs").children,function(c,j){c.className="chip"+(j===cfg.p?" on":"")})})();
@@ -624,7 +629,7 @@ $("sv").onclick=function(){
   var p=PROV[cfg.p];
   cfg.keys[p.k]=$("key").value.trim();
   cfg.models[p.k]=$("mdl").value.trim()||p.m;
-  if(p.k==="lmstudio"){cfg.urls=cfg.urls||{};cfg.urls[p.k]=$("url").value.trim().replace(/\/+$/,"")||"http://localhost:1234/v1"}
+  if(p.k==="lmstudio"||p.k==="evren"){cfg.urls=cfg.urls||{};var defU=p.k==="evren"?"https://evren.ssyz.org.tr/api/v1":"http://localhost:1234/v1";cfg.urls[p.k]=$("url").value.trim().replace(/\/+$/,"")||defU}
   jset(CK,cfg);$("sm").textContent="Kaydedildi. “Üret” sekmesine dönebilirsin.";
 };
 
@@ -648,7 +653,8 @@ function pick(cb,btn){
     im.onerror=function(){msg.textContent="Görsel açılamadı.";btn.textContent=o;btn.disabled=false};
     im.src=u;
   };
-  i.click();
+  document.body.appendChild(i);
+  try{i.click()}finally{setTimeout(function(){document.body.removeChild(i)},1000)}
 }
 $("im1").onclick=function(){pick(function(t){$("f1").value=t},$("im1"))};
 $("im2").onclick=function(){pick(function(t){$("f2").value=t},$("im2"))};
