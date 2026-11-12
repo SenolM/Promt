@@ -145,7 +145,7 @@ var PROV=[
  {n:"LM Studio (yerel)",k:"lmstudio",m:"local-model",h:"LM Studio’da Developer sekmesinden sunucuyu başlat, CORS’u aç. Model adını sunucu ekranındaki model kimliğinden kopyala. Anahtar gerekmez."},
  {n:"Claude API (ücretli)",k:"anthropic",m:"claude-sonnet-5-5",h:"Anahtar: console.anthropic.com. Kullanım ücretlidir."},
  {n:"OpenRouter",k:"openrouter",m:"openrouter/free",h:"Anahtar: openrouter.ai/keys. Varsayılan openrouter/free (Free Models Router) ücretsiz modeller arasından kendisi seçer. Belirli bir model istersen openrouter.ai/models sayfasındaki kimliği aynen yaz (ücretsiz sürümler :free ile biter)."},
- {n:"EVREN",k:"evren",m:"qwen2.5-72b-instruct",h:"Anahtar: evren.ssyz.org.tr adresinde hesap oluşturup API anahtarını al. Sunucu adresi varsayılan olarak https://evren.ssyz.org.tr/api/v1 olarak ayarlıdır; değiştirmek istersen aşağıdan düzenle. Desteklenen model adlarını platformdaki Soru Panosu'ndan öğrenebilirsin."}
+ {n:"EVREN",k:"evren",m:"qwen3-vl-30b",h:"Anahtar: evren.ssyz.org.tr adresinde hesap oluşturup API anahtarını al. Sunucu adresi varsayılan olarak https://evren.ssyz.org.tr/api/v1 olarak ayarlıdır; değiştirmek istersen aşağıdan düzenle. Görsel destekleyen modeller: qwen3-vl-30b, gemma-4-31b (istek başına max 8 görsel). Yalnızca metin için diğer modelleri de kullanabilirsin."}
 ];
 var CK="pu_cfg_v1",HK="vp_hist_v1";
 function jget(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}}
