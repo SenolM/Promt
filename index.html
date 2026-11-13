@@ -1,334 +1,697 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0b1220">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vidp Prompt Generator</title>
+<meta name="theme-color" content="#101014">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>İstem Üretici</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
-:root{--bg:#0b1220;--card:#131c2e;--line:#26324a;--tx:#e8eef8;--mut:#93a4c3;--acc:#5b8cff;--on:#1d3a6b;--bad:#ff6b6b;--ok:#3ddc97}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:0 12px calc(24px + env(safe-area-inset-bottom))}
-.tabs{display:flex;gap:6px;position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;border-bottom:1px solid var(--line)}
-.tab{flex:1;background:var(--card);color:var(--mut);border:1px solid var(--line);border-radius:12px;padding:10px 0;font-weight:700;cursor:pointer}
-.tab.act{color:#fff;background:var(--on);border-color:var(--acc)}
-h1{font-size:17px;margin:14px 0 2px}
-.sub{color:var(--mut);font-size:12.5px;margin:0 0 12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:12px}
-.lb{font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin:0 0 6px}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px;align-content:flex-start}
-.chip{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font:inherit;cursor:pointer}
-.chip.on{background:var(--on);border-color:var(--acc);color:#fff;font-weight:700}
-.chip.q{font-weight:600}
-.chip:disabled{opacity:.5}
-textarea{width:100%;min-height:88px;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--tx);padding:10px;font:inherit;resize:vertical}
-.btn{background:var(--acc);color:#fff;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;cursor:pointer;width:100%}
-.btn.alt{background:var(--card);border:1px solid var(--line);color:var(--tx)}
-.btn.dgr{background:#4a1d24;border:1px solid #7a2e39}
-.msg{font-size:13px;color:var(--mut);margin:8px 0 0;min-height:18px}
-.msg.bad{color:var(--bad)} .msg.ok{color:var(--ok)}
-pre{white-space:pre-wrap;overflow-wrap:break-word}
+:root{--bg:#f4f5f7;--card:#fff;--txt:#1a1d21;--muted:#6b7280;--ac:#4f6ef7;--line:#e2e4ea;--dgr:#e5484d;--ok:#30a46c;--wrn:#f5a623}
+@media(prefers-color-scheme:dark){:root{--bg:#101014;--card:#18181d;--txt:#eceef2;--muted:#9aa0ab;--ac:#7d94ff;--line:#26262e;--dgr:#ff6369;--ok:#4cc38a;--wrn:#ffb224}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:10px 10px calc(20px+env(safe-area-inset-bottom));max-width:840px;margin-left:auto;margin-right:auto}
+.tabs{display:flex;gap:6px;margin-bottom:10px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:10}
+.tab{flex:1;padding:10px;border:1px solid var(--line);background:var(--card);color:var(--txt);border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+.tab.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+.lb{font-weight:600;font-size:13px;color:var(--muted);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.03em}
+.lb:first-child{margin-top:0}
+.chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:5px 12px;margin:2px;background:var(--card);color:var(--txt);font-size:13.5px;cursor:pointer;transition:border-color .15s}
+.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.chip.q{border-style:dashed}
+textarea,input[type=text],input[type=password]{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;color:var(--txt);background:var(--bg);resize:vertical}
+textarea:focus,input:focus{outline:none;border-color:var(--ac)}
+textarea[readonly]{opacity:.75;cursor:default}
 .hid{position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}
-input,select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--tx);padding:10px;font:inherit;margin:0 0 12px}
-.row{display:flex;gap:8px}.row>*{flex:1}
-pre#out{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0;white-space:pre-wrap;overflow-wrap:break-word;max-height:46vh;overflow-y:auto}
-.hist{border:1px solid var(--line);border-radius:12px;padding:10px;margin:0 0 10px;font-size:13px}
-.hist .hd{display:flex;justify-content:space-between;color:var(--mut);font-size:11.5px;margin-bottom:6px}
-.hist pre{background:var(--bg);border-radius:8px;padding:8px;margin:0 0 8px;max-height:96px;overflow:hidden}
-.hist .ac{display:flex;gap:8px}.hist .ac button{flex:1}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:6px;vertical-align:2px}
-@media(prefers-color-scheme:light){:root{--bg:#f2f5fb;--card:#fff;--line:#d4dcea;--tx:#101726;--mut:#5a6a8c;--on:#dbe7ff}.chip{background:#eef2fa}}
+.msg{font-size:13px;color:var(--muted);margin-top:8px;min-height:18px}
+.msg.err{color:var(--dgr)}
+.msg.ok{color:var(--ok)}
+.btn{display:block;width:100%;padding:12px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:10px;background:var(--ac);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.danger{background:var(--dgr)}
+#styles{max-height:180px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:2px;align-content:flex-start}
+#out{margin-top:12px}
+#out .blk{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:10px;background:var(--bg)}
+#out .blk h4{margin:0 0 6px;font-size:13px;color:var(--muted)}
+#out pre{white-space:pre-wrap;overflow-wrap:break-word;word-wrap:break-word;margin:0;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+#out .row{display:flex;gap:6px;margin-top:8px}
+#hl .item{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:var(--bg);cursor:pointer}
+#hl .item:hover{border-color:var(--ac)}
+#hl .meta{font-size:12px;color:var(--muted);margin-bottom:4px}
+#hl .snippet{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#thumb{max-width:200px;max-height:140px;border-radius:8px;border:1px solid var(--line);margin-top:8px}
+select{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit;color:var(--txt);background:var(--bg)}
+.help{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.5}
 </style>
 </head>
 <body>
-<div class="tabs" role="tablist">
-  <button class="tab act" id="t1" role="tab" aria-selected="true">İstem</button>
-  <button class="tab" id="t2" role="tab" aria-selected="false">Geçmiş</button>
-  <button class="tab" id="t3" role="tab" aria-selected="false">Ayarlar</button>
+
+<div class="tabs">
+<button class="tab on" id="t1" type="button">🛠 Araç</button>
+<button class="tab" id="t2" type="button">📜 Geçmiş</button>
+<button class="tab" id="t3" type="button">⚙ Ayarlar</button>
 </div>
 
-<section id="v1" aria-labelledby="t1">
-  <h1>İstem Üretici</h1>
-  <p class="sub">Fikir + seçimler → temiz video/görsel istemi. İstem seçili modele yazdırılır, sonra Krea/Midjourney'e yapıştırılır.</p>
+<!-- ═══════════════ SEKME 1: ARAÇ ═══════════════ -->
+<section id="v1">
 
-  <div class="card">
-    <div class="lb">Mod</div><div class="chips" id="modes"></div>
-    <div class="lb" id="kll">Görev</div><div class="chips" id="kl" style="display:none"></div>
-    <div id="qw" style="display:none">
-      <div class="lb">Kuyruk ayarları</div>
-      <div class="chips" id="qdur"></div><div class="chips" id="qtx"></div>
-      <div class="lb">İlk kare promptu</div><div class="chips" id="qfr"></div>
-      <div class="lb">Referans rolü</div><div class="chips" id="qrf"></div>
-      <div class="lb">Kare oranı</div><div class="chips" id="qar"></div>
-    </div>
-    <div class="lb">Görev tipi (referans modunda)</div>
-    <div class="chips" id="tt"></div>
-    <button class="chip q" id="im3" style="display:none;margin-top:8px">📷 Görselden tanım doldur</button>
-  </div>
+<div class="card">
+<div class="lb">Mod</div>
+<div id="modes"></div>
+<div class="lb" id="kl">Tür</div>
+<div id="kinds"></div>
+<div id="dul" style="display:none">
+<div class="lb">Süre</div>
+<div id="durs"></div>
+</div>
+<div class="lb" id="shl">Shot sayısı</div>
+<div id="shots"></div>
+<div id="fr" style="display:none">
+<div class="lb" id="f1l">İlk kare (Picture 1) açıklaması</div>
+<textarea id="f1" rows="2" placeholder="örn. kızıl saçlı kadın, mavi hırka, sonbahar parkında, altın saat ışığı"></textarea>
+<button class="chip" id="im1" type="button">📷 Görselden doldur</button>
+<div id="f2l" class="lb" style="display:none">Son kare (Picture 2) açıklaması</div>
+<textarea id="f2" rows="2" style="display:none" placeholder="örn. aynı kadın, ağaç altında gülümsüyor, bokeh arka plan"></textarea>
+<button class="chip" id="im2" type="button" style="display:none">📷 Görselden doldur</button>
+</div>
+<div id="rfw" style="display:none">
+<div class="lb">Referans görsel</div>
+<button class="chip" id="pick" type="button">📷 Görsel seç</button>
+<button class="chip" id="rm" type="button" style="display:none">✕ Kaldır</button>
+<input type="file" id="file" accept="image/*" class="hid">
+<img id="thumb" alt="" style="display:none">
+<div class="lb">Referans sistemi</div>
+<div id="refmodes"></div>
+<div class="lb">Hedef model</div>
+<div id="rmodels"></div>
+<div class="lb">Görevler (çoklu seçim)</div>
+<div id="ts"></div>
+</div>
+<div id="qw" style="display:none">
+<div class="lb">Klip süresi</div>
+<div id="qdur"></div>
+<div class="lb">Klip sayısı</div>
+<div id="qtx"></div>
+<div class="lb">Başlangıç karesi promptu</div>
+<div id="qfr"></div>
+<div class="lb">Referans tipi</div>
+<div id="qrf"></div>
+<div class="lb">En-boy oranı</div>
+<div id="qar"></div>
+<button class="chip q" id="im3" type="button" style="margin-top:8px">📷 Görselden tanım doldur</button>
+</div>
+<div id="iw" style="display:none">
+<div class="lb">Görsel modeli</div>
+<div id="imodels"></div>
+<div class="lb">En-boy oranı</div>
+<div id="iars"></div>
+</div>
+</div>
 
-  <div class="card">
-    <div class="lb" id="idl">Fikir</div>
-    <textarea id="idea" placeholder="Konu: Picture 1'deki kızıl saçlı kadın, mavi hırka&#10;Video: rüzgârda saçları uçuşuyor, gülümsüyor, hafif kamera itmesi"></textarea>
-    <div id="fr" style="display:none"><div class="lb" id="f1l">İlk kare (Picture 1) açıklaması</div><textarea id="f1" placeholder="Picture 1'i saniyeliğine anlat"></textarea></div>
-    <div id="f2" style="display:none"><div class="lb" id="f2l">Son kare açıklaması</div><textarea id="f2t" placeholder="Picture 2'nin son halini anlat"></textarea></div>
-  </div>
+<div class="card">
+<div class="lb" id="idl">Fikir (tek cümle: özne + eylem + mekan + atmosfer)</div>
+<textarea id="idea" rows="3" placeholder="örn. Kızıl saçlı bir kadın, sonbahar parkında koşuyor, altın saat ışığı, sinematik"></textarea>
+<div class="lb">Karakterler</div>
+<div id="chs"></div>
+<button class="chip" id="csv" type="button">⬇ Dışa aktar</button>
+<button class="chip" id="cdl" type="button">⬆ İçe aktar</button>
+</div>
 
-  <div class="card" id="iw" style="display:none">
-    <div class="lb">Görseller</div>
-    <div class="lb">Picture 1</div>
-    <button class="btn alt" id="im1">Görsel seç</button>
-    <div id="im1v" class="msg"></div>
-    <div id="im2" style="display:none"><div class="lb">Picture 2</div><button class="btn alt" id="im2b">Görsel seç</button><div id="im2v" class="msg"></div></div>
-    <input type="file" id="file" accept="image/*" class="hid">
-  </div>
+<div class="card">
+<div class="lb">Stil</div>
+<div id="styles"></div>
+<textarea id="styleRules" rows="3" readonly></textarea>
+</div>
 
-  <div class="card">
-    <div class="lb" id="dul">Süre</div><div class="chips" id="durs"></div>
-    <div class="lb" id="shl">Shot sayısı</div><div class="chips" id="shots"></div>
-    <div class="lb" id="spl">Shot planı</div>
-    <textarea id="sp" placeholder="örn. 0-3 sn: yakın plan; 3-8 sn: çekim geriye"></textarea>
-    <div class="lb">Hedef model / çizim kuralı</div>
-    <div class="chips" id="models"></div>
-    <div class="lb">Görsel stili / ailesi</div><div class="chips" id="styles"></div>
-    <div class="lb">Kurallar</div>
-    <textarea id="styleRules" readonly placeholder="Stil kuralları"></textarea>
-    <div class="lb">Kamera (kuyruk)</div><div class="chips" id="cams" style="display:none"></div>
-    <div class="lb" id="dlgl">Diyalog dili</div><div class="chips" id="dlg" style="display:none"></div>
-    <div class="lb" id="musl">Müzik</div><div class="chips" id="mus" style="display:none"></div>
-    <div class="lb" id="cl">Varyasyon</div><div class="chips" id="counts"></div>
-  </div>
+<div class="card">
+<div class="lb" id="caml">Kamera</div>
+<div id="cams"></div>
+<div class="lb" id="dlgl">Diyalog dili</div>
+<div id="dlg"></div>
+<div class="lb" id="musl">Müzik</div>
+<div id="mus"></div>
+<div class="lb">Varyasyon sayısı</div>
+<div id="counts"></div>
+</div>
 
-  <div class="card" id="chs" style="display:none">
-    <div class="lb">Karakterler</div><div id="chlist"></div>
-    <div class="row" style="margin-top:10px"><button class="btn alt" id="csv">Kopyala</button><button class="btn alt" id="cdl">Kaydet</button></div>
-  </div>
+<div class="card">
+<div class="lb" id="spl">Shot planı (opsiyonel)</div>
+<textarea id="sp" rows="4" placeholder="örn. Shot 1: geniş plan, parkın girişi&#10;Shot 2: yakın plan, yüz ifadesi&#10;Shot 3: takip, koşu"></textarea>
+<button class="btn" id="go" type="button">🎬 Prompt üret</button>
+<button class="btn danger" id="stop" type="button" style="display:none">⏹ Durdur</button>
+<div class="msg" id="msg"></div>
+<div id="out"></div>
+</div>
 
-  <div class="card" style="display:flex;gap:10px">
-    <button class="btn" id="go" style="flex:2">Başlat</button>
-    <button class="btn alt" id="stop" style="flex:1;display:none">Durdur</button>
-  </div>
-
-  <div class="card">
-    <div class="lb">Giden istem</div>
-    <pre id="out">Henüz istem üretilmedi.</pre>
-    <div class="row" style="margin-top:10px">
-      <button class="btn alt" id="cp">Kopyala</button>
-      <button class="btn alt" id="cl1">Temizle</button>
-    </div>
-    <div class="msg" id="msg"></div>
-  </div>
 </section>
 
-<section id="v2" class="hid" aria-labelledby="t2">
-  <h1>Geçmiş</h1><p class="sub">Son 100 istem bu cihazda saklanır.</p>
-  <div class="card">
-    <div class="lb">Filtre</div><div class="chips" id="hf"></div>
-    <div id="hl"></div>
-    <button class="btn dgr" id="clrH">Geçmişi temizle</button>
-  </div>
+<!-- ═══════════════ SEKME 2: GEÇMİŞ ═══════════════ -->
+<section id="v2" style="display:none">
+<div class="card">
+<div class="lb">Filtre</div>
+<select id="hf">
+<option value="all">Tümü</option>
+<option value="v">Video</option>
+<option value="r">Referans</option>
+<option value="q">Kuyruk</option>
+<option value="i">Görsel</option>
+</select>
+<div id="hl" style="margin-top:12px"></div>
+<button class="btn danger" id="hclr" type="button">🗑 Geçmişi temizle</button>
+</div>
 </section>
 
-<section id="v3" class="hid" aria-labelledby="t3">
-  <h1>Ayarlar</h1><p class="sub">Sağlayıcı, anahtar ve stiller yalnızca bu cihazda (localStorage) saklanır.</p>
-  <div class="card">
-    <div class="lb">Sağlayıcı</div><div class="chips" id="provs"></div>
-    <div class="lb">Model</div><input id="mdl" placeholder="ör. gemini-flash-latest">
-    <div class="lb">API anahtarı</div><input id="key1" type="password" autocomplete="off" placeholder="sk-...">
-    <button class="btn" id="sv">Ayarları kaydet</button>
-    <div class="msg" id="msg3"></div>
-  </div>
-  <div class="card">
-    <div class="lb">Yeni stil</div>
-    <input id="csname" placeholder="Stil adı (ör. Cyberpunk rüya)">
-    <textarea id="csdesc" placeholder="Görsel açıklama / kural"></textarea>
-    <div class="lb">Aile</div><div class="chips" id="cstype"></div>
-    <button class="btn alt" id="csadd">Stili ekle</button>
-    <div class="lb" style="margin-top:12px">Ek stiller (tıklayınca silinir)</div><div class="chips" id="cslist"></div>
-  </div>
-  <div class="card">
-    <div class="lb">Yedekleme</div>
-    <div class="row"><button class="btn alt" id="exp">JSON dışa aktar</button><button class="btn alt" id="imp">JSON içe aktar</button></div>
-    <input type="file" id="jfile" accept=".json" class="hid">
-    <div class="msg" id="msg4"></div>
-  </div>
+<!-- ═══════════════ SEKME 3: AYARLAR ═══════════════ -->
+<section id="v3" style="display:none">
+<div class="card">
+<div class="lb">Sağlayıcı</div>
+<div id="provs"></div>
+<div class="lb">API anahtarı</div>
+<input type="password" id="k" placeholder="sk-..." autocomplete="off">
+<div class="lb">Model (boş = varsayılan)</div>
+<input type="text" id="mdl" placeholder="örn. gemini-flash-latest">
+<div class="help" id="phelp"></div>
+<button class="btn" id="sv" type="button">💾 Kaydet</button>
+<div class="msg" id="smsg"></div>
+</div>
+<div class="card">
+<div class="lb">Özel stil ekle</div>
+<input type="text" id="cname" placeholder="Stil adı (örn. Buz krallığı)">
+<textarea id="cdesc" rows="2" placeholder="Stil tanımı (örn. ice palace aesthetic, crystalline structures, cold blue tones)"></textarea>
+<div class="lb">Kural ailesi</div>
+<div id="cstype"></div>
+<button class="btn" id="csadd" type="button">➕ Stil ekle</button>
+<div id="cslist" style="margin-top:12px"></div>
+</div>
 </section>
 
 <script>
 (function(){
 "use strict";
-/* ============ yardımcılar ============ */
+
+/* ═══ YARDIMCILAR ═══ */
 function $(id){return document.getElementById(id)}
 function mk(t,c,tx){var e=document.createElement(t);if(c)e.className=c;if(tx!=null)e.textContent=tx;return e}
-function sh(id,on){var e=$(id);if(!e)return;e.style.display=on?"":"none";if(on)e.classList.remove("hid")}
-function say(id,s,cls){var m=$(id);m.textContent=s||"";m.className="msg"+(cls?" "+cls:"")}
-function toast(s,cls){say("msg",s,cls)}
+function sh(id,on){var e=$(id);e.style.display=on?"":"none"}
+function dl(name,content,type){var a=mk("a");a.href=URL.createObjectURL(new Blob([content],{type:type||"text/plain"}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
+function now(){return Date.now()}
 
-/* ============ depolama ============ */
-var CK="pu_cfg_v1",HK="vp_hist_v1",CSK="vp_cstyles_v1",CHK="vp_chars_v1";
+/* ═══ DEPOLAMA ═══ */
+var CK="pu_cfg_v1",HK="vp_hist_v1",CHK="vp_chars_v1",CSK="vp_cstyles_v1";
 function jget(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
-function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){say("msg3","Kayıt başarısız (depolama dolu olabilir).","bad");toast("Kayıt başarısız.","bad")}}
-var cfg=jget(CK,{p:0,keys:{},models:{}});cfg.keys=cfg.keys||{};cfg.models=cfg.models||{};
-var hist=jget(HK,[]),chars=jget(CHK,[]);
+function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){if(k===HK||k===CSK||k===CHK){console.warn("Depolama hatası:",k)}else{$("smsg").textContent="⚠ Kayıt başarısız (depolama dolu olabilir)";$("smsg").className="msg err"}}}
 
-/* ============ veri tanımları (init'ten ÖNCE) ============ */
-var PROV=[
- ["Gemini","generativelanguage","https://generativelanguage.googleapis.com/v1beta/openai/chat/completions","chat","Gemini 3 Flash API anahtarı: Google AI Studio. Ücretsiz katmanı var.","gemini-flash-latest"],
- ["Claude","anthropic","https://api.anthropic.com/v1/messages","anthropic","Anahtar: console.anthropic.com. Kullanım ücretlidir.","claude-sonnet-4-5"],
- ["OpenRouter","openrouter","https://openrouter.ai/api/v1/chat/completions","chat","Varsayılan openrouter/auto (Model Router).","openrouter/auto"],
- ["Groq","groq","https://api.groq.com/openai/v1/chat/completions","chat","Ücretsiz hızlı Llama. Anahtar: console.groq.com.","llama-3.3-70b-versatile"],
- ["LM Studio","lmstudio","http://localhost:1234/v1/chat/completions","chat","Yerel sunucu. Yerel model adı yazılmalı.","local-model"]
-];
-var MODES=["Video: Base","Video: Referans","Kuyruk","Görsel"];
-var KINDS=[["T2VA","Yazıdan"],["I2VA","Görselden"],["FL2VA","Kareler"],["L2VA","Son kare"]];
-var DURS=[4,5,6,8,10,15],SHOTS=["Oto",1,2,3,4],COUNTS=[1,2,4],CAMS=["Yok","Kamerayı sabitle","Yakınlaşma","Çekim","Sağa kaydır","Sola kaydır"],DLG=["Yok","Türkçe","English"],MUS=["Yok","Müzik istenir"],QD=["Oto",3,4,5,6,8,10],QAR=["16:9","9:16","1:1"];
-var RULES={R:"Gerçekçi fizik ve ışık; bozulma, flicker, titreşen doku, ayna-yansıması ve asimetri hatası yok.",C:"Animasyon tutarlılığı; çizgi kalınlığı ve renk paleti shotlar arasında sabit.",A:"3D sahne tutarlılığı; malzeme ve aydınlatma shotlar arasında sabit, geometri patlamıyor."};
-var STY0=[["Yok","","R"],["Sinematik","","R"],["Dokümanter","","R"],["Altın saat","","R"],["Neon noir","","R"],["Analog / VHS","","R"],["Moda editoryal","","R"],["Ürün reklamı","","R"],["Film noir","","R"],["Wes Anderson","","C"],["Gotik fantastik","","R"],["80'ler synthwave","","C"],["2D anime","","C"],["Ghibli","","C"]];
-var STYLE_FAMILY={"Film noir":"R","Noir neon":"C","Polaroid":"R","Barbiecore":"R","Vogue editoryal":"R","Dokümanter sokak":"R","90'lar nostalji":"R","Y2K":"C","Cottagecore":"R","Dark academia":"R","Boho/Ibiza":"R","Anime/Ghibli":"C","Makoto Shinkai":"C","3D Pixar":"A","Comic/pop art":"C","Mavi saat":"R","Gotik fantastik":"R","Pastel rüya":"C","Lüks ürün":"R"};
-var STYI0=[["Yok","Sinematik ışık, detay, doğru anatomi"],["Barbiecore",""],["Film noir",""],["Sinematik",""],["Altın saat",""],["80'ler neon",""],["Analog film",""],["Minimal stüdyo",""],["Vogue editoryal",""],["Polaroid",""],["Wes Anderson",""],["Noir neon",""],["Dokümanter sokak",""],["90'lar nostalji",""],["Y2K",""],["Cottagecore",""],["Dark academia",""],["Boho/Ibiza",""],["Yağlıboya portre",""],["Suluboya",""],["Anime/Ghibli",""],["Makoto Shinkai",""],["3D Pixar",""],["Comic/pop art",""],["Mavi saat",""],["Gotik fantastik",""],["Pastel rüya",""],["Lüks ürün",""]];
-var STYI0b=STYI0.map(function(x){return[x[0],x[1]||x[0],STYLE_FAMILY[x[0]]||"R"]});
-var NEWSTY=[["Sinematik film","Sinematik, 35 mm, film grenli","R"],["Anime / manga","El çizimi anime, net kontur","C"],["3D render","Temiz 3D render, stüdyo ışık","A"],["Piksel art","Piksel art, sınırlı palet","C"],["Gerçekçi fotoğraf","Doğal ışık, gerçekçi fotoğraf","R"]];
-var TT=["Sadece hareket","Kamerayı sabitle","Kare eşleme (start→end)","Sadece son kare"];
-var QUICK=["Işığı yumuşat","Flicker'i engelle","Gezinti tutarlılığını koru","Shot sayısını koru"];
-var STYV0=STY0.slice(),STYIL=[];
-var cstyles=jget(CSK,[]);
-function styleLists(){STY=STYV0.slice();STYIL=STYI0b.slice();NEWSTY.concat(cstyles.map(function(c){return[c.n,c.t,c.f]})).forEach(function(x){STY.push([x[0],(x[2]==="R"?"Live-action ":"")+x[1],x[2]]);STYIL.push([x[0],(x[1]||x[0]).charAt(0).toUpperCase()+(x[1]||"").slice(1),x[2]]);})}
-var st={mo:0,k:0,d:3,sh:0,dl:0,mus:0,c:0,sy:0,syi:0,qd:0,qt:1,qf:0,qrf:0,qar:0};
-var tsel={};
-var CSF=["R","C","A"],csf=0;
-
-/* sistem talimatları */
-var COMMON="Sen bir video/görsel istem mühendisisin. Sana verilen fikir + seçimlerden TEK bir nihai istem üretirsin. Yorum yapma, sadece istem metnini ver.";
-var SYSB="Kullanıcının shot planına sadık kal; shot aralıklarını koru; her shot'u [Shot N] biçiminde etiketle.";
-var SYSR="Referans görsellere sadakat zorunlu: kişi/nesne kimliği (yüz, saç, giysi, renk) shotlar arasında değişmesin.";
-var SYSQ="Çok klipli kuyruk istemi üret. Her klip için ayrı blok: [Clip N] süre, kamera, eylem, sound (ambience + fiziksel eylem sesi). Paragraf içinde satır atla, blok başına satır kullan.";
-var SYSK="Görsel istemi üret. Stil ailesinin kurallarını aynen uygula; hedef modelin parametrelerini (--ar, --style gibi) öneri olarak ekle.";
-var QKEEP="İstemde yazan kişi/nesne/gezinme tutarlılığı, shot planı ve [Clip/Shot] aralıkları AYNI kalır; sadece temizlenir.";
-var STYI0desc="";
-var SYS=COMMON;
-var IMODELS=[["nano-banana","image"],["Krea 2","image",1],["Midjourney v7","image"],["FLUX","image"],["GPT-Image","image"],["Imagen 4","image"]];
-var REFMODES=[["Kişi / nesne (hepsi kimlik kaynağı)","Her referans kişi veya nesne tanımlar, kimlik korunur."],["Ana özne / mekan (ilk görsel), sonrası kişi / nesne","Picture 1 ana özne/mekan, sonraki görseller ek kişi/nesne."]];
-
-/* ============ DOM kurulumları ============ */
-function chips(id,items,key,label,after){var el=$(id);el.textContent="";items.forEach(function(it,i){var cur=(typeof key==="function")?key():st[key];var b=mk("button","chip"+(cur===i?" on":""),label(it,i));b.onclick=function(){if(typeof key==="function")return;st[key]=i;[].forEach.call(el.children,function(c,j){c.classList.toggle("on",j===i)});if(after)after(i)};el.appendChild(b)})}
-function selectedStyle(){var list=st.mo===3?STYIL:STY;var i=Math.min(st.mo===3?st.syi:st.sy,list.length-1);return list[i]||["Yok","","R"]}
-function refreshStyleRules(){var s=selectedStyle();$("styleRules").value="["+s[0]+"] "+(s[1]||"")+"\nKural: "+(RULES[s[2]]||RULES.R)}
-function buildStyles(){styleLists();var list=st.mo===3?STYIL:STY;var key=st.mo===3?"syi":"sy";if(st[key]>list.length-1)st[key]=Math.max(0,list.length-1);chips("styles",list,key,function(x){return x[0]},refreshStyleRules)}
-function upd(){
-  var r=st.mo===1,q=st.mo===2,im=st.mo===3,k=KINDS[st.k][0];
-  sh("kl",!r&&!q);sh("kinds",!r&&!q);sh("fr",!r&&!q&&k!=="T2VA");sh("rfw",r);
-  $("f1l").textContent=k==="L2VA"?"Son kare (Picture 1) açıklaması":"İlk kare (Picture 1) açıklaması";
-  var b2=k==="FL2VA";sh("f2",b2);sh("f2l",b2);sh("im2",b2);sh("qw",q);sh("im3",q);
-  sh("iw",im);
-  if(im){["kl","kinds","fr","rfw","dul","durs","shl","shots","spl","sp","caml","cams","dlgl","dlg","musl","mus","qw","im3","tt"].forEach(function(x){sh(x,false)})}
-  else{["shl","shots","spl","sp","cams","dlg","mus"].forEach(function(x){sh(x,!im)});sh("cams",q);sh("dlg",!q);sh("mus",!q);sh("tt",r)}
-  $("shl").textContent=q?"Klip sayısı":"Shot sayısı";
-  $("spl").textContent=q?"Klip planı (otomatik doldurulur)":"Shot planı";
-  $("idl").textContent=q?"Fikir (her klip):":"Fikir";
-  $("models").parentElement.style.display=im?"":"none";
-  buildStyles();refreshStyleRules();
+var cfg=jget(CK,{p:0,keys:{},models:{}});
+cfg.keys=cfg.keys||{};cfg.models=cfg.models||{};
+var hist=jget(HK,[]);
+/* Eski pu_hist_v1'den taşıma */
+if(!jget("vp_imported_pu",0)){
+  var oldH=jget("pu_hist_v1",[]);
+  if(Array.isArray(oldH)&&oldH.length){
+    oldH.forEach(function(o){if(o.mo==null)o.mo=3;hist.push(o)});
+    hist.sort(function(a,b){return(Number(b.id)||0)-(Number(a.id)||0)});
+    jset(HK,hist.slice(0,100))
+  }
+  jset("vp_imported_pu",1)
 }
-/* başlangıç render */
+
+/* ═══ VERİ: SAĞLAYICILAR ═══ */
+var PROV=[
+ ["Gemini","Anahtar: aistudio.google.com (ücretsiz kotası geniş). Anahtar tarayıcınızda kalır, sunucuya gönderilmez.","gemini-flash-latest","https://generativelanguage.googleapis.com/v1beta/openai/","openai"],
+ ["Anthropic Claude","Anahtar: console.anthropic.com. Kullanım ücretlidir. Anahtar tarayıcınızda kalır.","claude-sonnet-4-5","https://api.anthropic.com/","anthropic"],
+ ["OpenRouter","Anahtar: openrouter.ai/keys. Kullanım ücretlidir. Anahtar tarayıcınızda kalır.","openrouter/auto","https://openrouter.ai/api/","openai"],
+ ["Groq","Anahtar: console.groq.com (ücretsiz kotası geniş). Anahtar tarayıcınızda kalır.","llama-3.3-70b-versatile","https://api.groq.com/","openai"],
+ ["LM Studio (yerel)","Yerel sunucu: LM Studio'da Developer sekmesinden sunucuyu başlatın. Model adını yazın (örn. qwen2.5-7b-instruct).","local-model","http://localhost:1234/","openai"]
+];
+
+/* ═══ VERİ: MOD / TÜR / SÜRE / SHOT ═══ */
+var MODES=["Video: Base","Video: Referans","Kuyruk","Görsel"];
+var KINDS=[["T2VA","Metin → Video"],["I2VA","Görsel → Video"],["F2VA","İlk kare → Video"],["L2VA","Son kare → Video"],["FL2VA","İlk+Son kare"]];
+var DURS=[4,5,6,8,10,15];
+var SHOTS=["Oto",1,2,3,4];
+var COUNTS=[1,2,3,4];
+
+/* ═══ VERİ: KAMERA / DİYALOG / MÜZİK ═══ */
+var CAMS=[
+["Oto",""],["Statik trip","tripod, locked-off framing"],["Hafif salınım","slow subtle camera sway"],
+["Pan","smooth horizontal pan"],["Tilt","vertical tilt"],["Dolly-in","slow dolly-in, intensifying focus"],
+["Dolly-out","slow dolly-out revealing context"],["Zoom-in","slow zoom-in"],["Zoom-out","slow zoom-out"],
+["Orbit","smooth orbital arc around subject"],["Tracking","lateral tracking shot following subject"],
+["Crane / jib","rising crane movement"],["El kamerası","handheld camera, organic motion"],
+["Drone","aerial drone perspective, sweeping motion"],["FPV drone","fpv drone, dynamic fast motion"],
+["Snorricam","snorricam body-mounted shot"],["Zipline","vertical fast zipline descent"],
+["Whip pan","whip pan transition"],["Rack focus","rack focus shifting attention"],
+["Dutch angle","dutch angle tilt"],["Omni","omnidirectional 360 camera"],["Ayna","mirror/reflection shot"]
+];
+var DLG=[["Yok",""],["Türkçe","Turkish"],["English","English"],["Otomatik","match the setting"]];
+var MUS=[["Yok",""],["Sinematik","cinematic score"],["Gerilim","tense pulse"],["Elektronik","electronic beat"],["Akustik","acoustic guitar"],["Orkestral","orchestral"],["Ambiyans","ambient drone"],["Neon pop","neon pop"],["Caz","jazz"]];
+
+/* ═══ VERİ: STİL KURALLARI ═══ */
+var RULES={
+R:"Live-action: natural skin texture, practical lighting, physically plausible materials, cinematic color grading, filmic contrast, shallow depth of field.",
+A:"Anime: cel shading, bold line art, expressive eyes, limited palette per scene, 2D animation physics, clean silhouettes.",
+"3D":"3D animation: physically-based rendering, soft global illumination, stylized proportions, subsurface scattering, Pixar-quality polish."
+};
+
+/* ═══ VERİ: VİDEO STİLLERİ ═══ */
+var STY=[
+["Yok",""],
+["Sinematik","cinematic look, filmic contrast, shallow depth of field"],
+["Dokümanter","documentary realism, natural light"],
+["Altın saat","golden hour warmth, long soft shadows"],
+["Neon noir","neon noir: wet streets, hard magenta-cyan rim light, deep shadows"],
+["Analog / VHS","analog VHS artifacts, chroma bleed, scanlines, timestamp overlay"],
+["Moda editoryal","high-fashion editorial styling, magazine-grade retouch"],
+["Ürün reklamı","commercial product-shot polish, controlled reflections"],
+["Film noir","film noir: high-contrast black-and-white, venetian blind shadows"],
+["Wes Anderson","symmetrical framing, pastel palette, centered subject, whimsical production design"],
+["Gotik fantastik","gothic fantasy: candle-lit gloom, mist, baroque detail"],
+["80'ler synthwave","1980s synthwave: chrome, magenta-cyan gradients, grid horizon"],
+["2D anime","2D anime style, cel shading, bold line art"],
+["Ghibli","ghibli-esque watercolor warmth, lush nature, gentle whimsy"],
+["3D CG","stylized 3D animation, physically-based rendering, subtle depth of field"],
+["Cyberpunk","cyberpunk: neon-drenched megacity, holographic ads, rain-slick streets"],
+["Stop-motion","stop-motion charm, tactile felt/clay textures, subtle frame jitter"],
+["Suluboya","watercolor wash, soft bleeding edges, paper grain"],
+["Karakalem","charcoal sketch, expressive strokes, monochrome"],
+["Piksel art","16-bit pixel art, limited palette, dithering"],
+["Papercraft","layered paper cutout diorama, soft shadows, craft textures"],
+["Cyc duvarı","seamless cyclorama studio backdrop, even lighting"]
+];
+
+/* ═══ VERİ: GÖRSEL STİLLERİ ═══ */
+var STYI0=[
+["Yok",""],
+["Barbiecore","barbiecore: hot pink, glossy plastic, hyper-feminine"],
+["Film noir","film noir: high-contrast monochrome, venetian blind shadows"],
+["Sinematik","cinematic still, anamorphic bokeh, filmic color grade"],
+["Altın saat","golden hour warmth, backlit halo, long shadows"],
+["80'ler neon","1980s neon: magenta-cyan rim light, wet reflections"],
+["Analog film","analog 35mm film: halation, grain, faded blacks"],
+["Minimal stüdyo","minimalist studio: seamless backdrop, softbox lighting"],
+["Vogue editoryal","vogue editorial: high-fashion pose, dramatic lighting"],
+["Polaroid","polaroid snapshot: soft focus, light leak, instant border"],
+["Wes Anderson","wes anderson: symmetrical, pastel, centered"],
+["Noir neon","noir + neon: moody urban night, hard colored light"],
+["Dokümanter sokak","street documentary: candid, available light"],
+["90'lar nostalji","1990s nostalgia: grainy compact-camera aesthetic"],
+["Y2K","y2k aesthetic: chrome, holographic, low-fi futurism"],
+["Cottagecore","cottagecore: pastoral warmth, rustic textures"],
+["Dark academia","dark academia: candle-lit library, tweed, ink"],
+["Boho / Ibiza","boho ibiza: linen, terracotta, sun-drenched"],
+["Yağlıboya portre","oil painting portrait: visible brushwork, chiaroscuro"],
+["Suluboya","watercolor: soft washes, paper grain"],
+["Anime / Ghibli","anime ghibli: watercolor backgrounds, expressive characters"],
+["Makoto Shinkai","makoto shinkai: hyper-luminous skies, lens flare"],
+["3D Pixar","3d pixar-style: stylized characters, soft GI"],
+["Comic / pop art","comic pop art: halftone dots, bold outlines"],
+["Mavi saat","blue hour: cool twilight, city lights emerging"],
+["Gotik fantastik","gothic fantasy: cathedral gloom, mist, baroque"],
+["Pastel rüya","pastel dream: soft focus, cotton-candy palette"],
+["Lüks ürün","luxury product: black acrylic, spotlight, controlled reflections"]
+];
+
+var STYLE_FAMILY={"2D anime":"A","Ghibli":"A","Anime / Ghibli":"A","Makoto Shinkai":"A","3D CG":"3D","3D Pixar":"3D","Stop-motion":"3D","Piksel art":"A","Karakalem":"A","Suluboya":"A","Comic / pop art":"A"};
+
+/* ═══ VERİ: REFERANS MODU ═══ */
+var REFMODES=[
+["MiniMax H3","MiniMax referans görsel desteği"],
+["Kling 2.5","Kuaishou referans akışı"],
+["Wan 2.5","Alibaba açık model"],
+["Sora 2","OpenAI video modeli"]
+];
+var TT=["Kıyafet değişimi","Duruş/poz değişimi","Arka plan değişimi","Işık/atmosfer değişimi","Stil aktarımı","Hareket ekleme","Ürün yerleştirme"];
+
+/* ═══ VERİ: GÖRSEL MODU ═══ */
+var IMODELS=[
+["Nano Banana","Google Gemini görsel; güçlü düzenleme ve metin render",1],
+["Midjourney v7","Estetik odaklı; --ar parametreleri",0],
+["Flux 1.1 Pro","Fotogerçekçi; hızlı",0],
+["Krea 2","Krea görsel modeli",1],
+["Ideogram 3","Metin render'da güçlü",0]
+];
+var IARS=["1:1","4:3","3:4","16:9","9:16","2:3","3:2"];
+
+/* ═══ VERİ: KUYRUK MODU ═══ */
+var QD=["Oto",3,4,5,6,8,10];
+var QTX=[3,5,8,10];
+var QRF=[["Kişi / nesne (hepsi kimlik kaynağı)","identity"],["Ana özne / mekan (ilk görsel)","scene"]];
+var QAR=["9:16","16:9","1:1"];
+
+/* ═══ VERİ: YENİ STİLLER ═══ */
+var NEWSTY=[
+["Neo-brütalist","brutalist concrete, harsh geometry, monumental shadow","R"],
+["Y2K krom","y2k chrome: liquid metal, holographic reflections","R"],
+["Cottagecore video","cottagecore: warm natural light, rustic calm","R"],
+["Dark academia video","dark academia: candle-lit libraries, tweed","R"],
+["Pastel rüya video","pastel dream: soft focus, cotton-candy palette","R"]
+];
+
+/* ═══ SİSTEM PROMPTLARI ═══ */
+var COMMON="\n\nKurallar:\n- Karakterler tüm shot'larda %100 tutarlı olmalı: aynı yüz, saç, vücut tipi, kıyafet ve aksesuar (sahne açıkça değişim gerektirmiyorsa).\n- Doğal, fizik kurallarına uygun hareket; ağırlık, momentum ve temas gerçekçi. Morfolojik bozulma, erime, fazladan uzuv YOK.\n- Kamera dili: [Shot N] işaretleri shot sınırlarını tanımlar.\n- Alt yazı, filigran, logo veya metin katmanı YOK (açıkça istenmedikçe).\n- overall_soundscape: ortam seslerini ve fiziksel eylem seslerini tanımla.";
+
+var SYSB="Sen bir AI video prompt mühendisisin (MiniMax H3 formatı). SADECE geçerli bir JSON nesnesi üret (markdown fence yok, açıklama yok). Şema:\n{\n\"title\":\"kısa, etkileyici başlık\",\n\"detailed_description\":\"tek akıcı paragraf; [Shot 1], [Shot 2] işaretleriyle her kamera kurulumunu tanımla\",\n\"first_frame_image\":\"açılış karesinin fotoğraf gibi detaylı tanımı\",\n\"camera_fixed\":true,\n\"overall_soundscape\":\"ortam sesleri\",\n\"overall_mood\":\"duygusal ton\",\n\"non_diegetic_music\":\"müzik tanımı veya boş string\",\n\"dialogue\":[{\"line\":\"...\",\"context\":\"...\"}]\n}\nKurallar: detailed_description TEK paragraf olmalı; satır sonu yok. Süre ve shot sayısı isteğe uymalı. Diyalog dili belirtilmişse o dilde yaz."+COMMON;
+
+var KH={
+T2VA:"first_frame_image'i sahneye göre sıfırdan tasarla.",
+I2VA:"Kullanıcının yüklediği görsel ilk kare olacak. first_frame_image'de bu görseli sadakatle tanımla.",
+F2VA:"Kullanıcı ilk kare tanımı verdi. first_frame_image'de bunu rafine et ve kullan.",
+L2VA:"Kullanıcı son kare tanımı verdi. Video bu karede biter. last_frame_image alanı da ekle.",
+FL2VA:"Kullanıcı hem ilk hem son kare tanımı verdi. Video bu iki kare arasında geçiş yapar. last_frame_image alanı da ekle."
+};
+
+var SYSR="Sen bir AI video prompt mühendisisin (referans görsel modu, MiniMax H3 formatı). Kullanıcı bir referans görsel sağladı. SADECE geçerli JSON üret.\nfirst_frame_image referans görseli sadakatle tanımlamalı; öznenin kimliğini, kıyafetini ve mekanı korumalı (görev açıkça değişim istemiyorsa). Görev talimatlarını detailed_description'a işle."+COMMON;
+
+var SYSQ="Sen bir kısa video kuyruğu (seri içerik) prompt mühendisisin. SADECE geçerli bir JSON DİZİSİ üret. Her klip:\n- 3-8 saniye\n- İlk saniyede hook (dikkat çeken an)\n- Karakter ve stil tüm kliplerde tutarlı\n- Tek paragraf tanım, satır sonu yok\n- Ses tanımı (ortam + fiziksel eylem sesleri)\nŞema: [{\"clip\":1,\"duration\":4,\"description\":\"...\",\"frame_prompt\":\"...\",\"sound\":\"...\"}]"+COMMON;
+
+var SYSK="Sen bir görsel prompt mühendisisin. Hedef model için tek bir yoğun, virgülle ayrılmış prompt yaz. İçerik: özne, eylem, mekan, ışık, kamera/lens, kompozisyon, stil anahtar kelimeleri, atmosfer. Açıklama YOK, sadece prompt metni.";
+
+var SYS="Sen bir görsel prompt mühendisisin. Kullanıcının verdiği fikri hedef model için optimize edilmiş tek bir prompt'a dönüştür. Yoğun, virgülle ayrılmış, görsel modelin anlayacağı dilde yaz. Açıklama YOK.";
+
+var QKEEP="Mevcut prompt'un tüm yapısını, uzunluğunu ve detay seviyesini koru. SADECE istenen değişikliği uygula, başka hiçbir şeye dokunma.";
+
+var QUICK=["Daha sinematik yap","Daha kısa ve yoğun yaz","Türkçeye çevir","İngilizceye çevir","Daha fazla hareket ekle","Işığı vurgula","Emosyonu güçlendir"];
+
+/* ═══ STİL LİSTELERİ ═══ */
+var cstyles=jget(CSK,[]);
+var STYV0=STY.slice();
+var STYIL=STYI0.map(function(x){return[x[0],x[1],STYLE_FAMILY[x[0]]||"R"]});
+var STYI0b=STYIL.slice();
+
+function styleLists(){
+  STY=STYV0.slice();
+  STYIL=STYI0b.slice();
+  NEWSTY.concat(cstyles.map(function(c){return[c.n,c.t,c.f]})).forEach(function(x){
+    STY.push([x[0],(x[2]==="R"?"Live-action ":"")+x[1],x[2]]);
+    STYIL.push([x[0],x[1].charAt(0).toUpperCase()+x[1].slice(1),x[2]]);
+  });
+}
+
+function selectedStyle(){
+  var list=st.mo===3?STYIL:STY;
+  var i=st.mo===3?st.syi:st.sy;
+  if(i<0||i>=list.length)i=0;
+  return list[i]||["Yok","","R"];
+}
+
+function buildStyles(){
+  styleLists();
+  var im=st.mo===3,list=im?STYIL:STY,key=im?"syi":"sy";
+  if(st[key]<0||st[key]>=list.length)st[key]=0;
+  chips("styles",list,key,function(x){return x[0]},refreshStyleRules);
+}
+
+function refreshStyleRules(){
+  var s=selectedStyle();
+  var f=s[2]||"R";
+  $("styleRules").value=RULES[f]||RULES.R;
+}
+
+/* ═══ DURUM ═══ */
+var st={
+  mo:0,k:0,d:3,sh:0,
+  sy:0,syi:0,
+  ca:0,dl:0,mus:0,cnt:0,
+  qd:0,qt:1,qf:0,qrf:0,qa:0,
+  rfm:0,rmd:0,
+  im:0,iar:0,
+  ch:[]
+};
+var tsel={};
+var chars=jget(CHK,[]);
+
+/* ═══ CHIP'LER ═══ */
+function chips(id,items,key,label,after){
+  var el=$(id);el.textContent="";
+  items.forEach(function(it,i){
+    var b=mk("button","chip"+(st[key]===i?" on":""),label(it));
+    b.type="button";
+    b.onclick=function(){
+      st[key]=i;
+      [].forEach.call(el.children,function(c,j){c.classList.toggle("on",j===i)});
+      if(after)after(i);
+    };
+    el.appendChild(b);
+  });
+}
+
+/* ═══ GÖRÜNÜRLÜK / upd() ═══ */
+function upd(){
+  var r=st.mo===1,q=st.mo===2,im=st.mo===3;
+  var k=KINDS[st.k][0],b2=k==="FL2VA";
+  sh("kl",!r&&!q&&!im);sh("kinds",!r&&!q&&!im);
+  sh("dul",!r&&!q&&!im);sh("durs",!r&&!q&&!im);
+  sh("fr",(!r&&!q&&!im&&k!=="T2VA")||(q&&st.qf===1));
+  sh("f2",b2&&!r&&!q&&!im);sh("f2l",b2&&!r&&!q&&!im);sh("im2",b2&&!r&&!q&&!im);
+  sh("rfw",r);sh("qw",q);sh("im3",q);sh("iw",im);
+  sh("shl",!im);sh("shots",!im);
+  sh("spl",!im);sh("sp",!im);
+  sh("caml",!im);sh("cams",!im);
+  sh("dlgl",!im);sh("dlg",!im);
+  sh("musl",!im&&!q);sh("mus",!im&&!q);
+  $("shl").textContent=q?"Klip sayısı (plan boşsa)":"Shot sayısı";
+  $("spl").textContent=q?"Klip planı (her satır bir klip)":"Shot planı (opsiyonel)";
+  $("idl").textContent=im?"Fikir (görsel konusu: özne + eylem + mekan + atmosfer)":"Fikir (tek cümle: özne + eylem + mekan + atmosfer)";
+  $("f1l").textContent=k==="L2VA"?"Son kare (Picture 1) açıklaması":b2?"İlk kare (Picture 1) açıklaması":"İlk kare (Picture 1) açıklaması";
+  buildStyles();
+  refreshStyleRules();
+}
+
+/* ═══ İNİT: CHIP'LERİ KUR ═══ */
 chips("modes",MODES,"mo",function(x){return x},upd);
 chips("kinds",KINDS,"k",function(x){return x[1]},upd);
 chips("durs",DURS,"d",function(x){return x+" sn"});
-chips("shots",SHOTS,"sh",function(x){return x});
-chips("qdur",QD,"qd",function(x){return x+" sn"});
-chips("qtx",["Kareler dahil","Kareler hariç"],"qt",function(x){return x});
-chips("qfr",["Kapalı","Açık"],"qf",function(x){return x});
-chips("qrf",["Ana özne / mekan","Kişi / nesne"],"qrf",function(x){return x});
-chips("qar",QAR,"qar",function(x){return x});
-chips("styles",STY,"sy",function(x){return x[0]},refreshStyleRules);
-chips("cams",CAMS,"cam",function(x){return x});
-chips("dlg",DLG,"dl",function(x){return x});
-chips("mus",MUS,"mus",function(x){return x});
-chips("counts",COUNTS,"c",function(x){return x+" adet"});
-chips("cstype",CSF,function(){return csf},function(x){return x==="R"?"Gerçekçi":x==="C"?"Çizgi":"3D"});
-(function(){var el=$("tt");TT.forEach(function(t,i){var b=mk("button","chip q","• "+t);b.onclick=function(){tsel[t]=!tsel[t];b.classList.toggle("on",!!tsel[t])};el.appendChild(b)});
- var kl=$("kl");KINDS.forEach(function(x,i){var b=mk("button","chip q"+(st.k===i?" on":""),x[1]);b.onclick=function(){st.k=i;[].forEach.call(kl.children,function(c,j){c.classList.toggle("on",j===i)});upd()};kl.appendChild(b)});
- var md=$("models");IMODELS.forEach(function(x,i){var b=mk("button","chip q"+(st.i===i?" on":""),x[0]);b.onclick=function(){st.i=i;[].forEach.call(md.children,function(c,j){c.classList.toggle("on",j===i)})};md.appendChild(b)});
+chips("shots",SHOTS,"sh",function(x){return""+x});
+chips("qdur",QD,"qd",function(x){return""+x});
+chips("qtx",QTX,"qt",function(x){return x+" klip"});
+chips("qfr",["Kapalı","Açık"],"qf",function(x){return x},upd);
+chips("qrf",QRF,"qrf",function(x){return x[0]});
+chips("qar",QAR,"qa",function(x){return x});
+chips("cams",CAMS,"ca",function(x){return x[0]});
+chips("dlg",DLG,"dl",function(x){return x[0]});
+chips("mus",MUS,"mus",function(x){return x[0]});
+chips("counts",COUNTS,"cnt",function(x){return x+"x"});
+chips("refmodes",REFMODES,"rfm",function(x){return x[0]});
+chips("rmodels",["Prompt formatı: JSON","Prompt formatı: düz metin"],"rmd",function(x){return x});
+chips("imodels",IMODELS,"im",function(x){return x[0]});
+chips("iars",IARS,"iar",function(x){return x});
+
+/* Görev chip'leri (referans modu, çoklu seçim) */
+(function(){
+  var el=$("ts");el.textContent="";
+  TT.forEach(function(t){
+    var b=mk("button","chip q"+(tsel[t]?" on":""),t);
+    b.type="button";
+    b.onclick=function(){tsel[t]=!tsel[t];b.classList.toggle("on",!!tsel[t])};
+    el.appendChild(b);
+  });
 })();
+
 upd();
 
-/* ============ sekmeler ============ */
-function tab(n){["1","2","3"].forEach(function(x){var on=x===n;$("t"+x).classList.toggle("act",on);$("t"+x).setAttribute("aria-selected",on?"true":"false");sh("v"+x,on)});if(n==="2")renderHist()}
-$("t1").onclick=function(){tab("1")};$("t2").onclick=function(){tab("2")};$("t3").onclick=function(){tab("3")};
+/* ═══ KARAKTERLER ═══ */
+function renderChars(){
+  var el=$("chs");el.textContent="";
+  chars.forEach(function(c,i){
+    var on=st.ch.indexOf(i)>=0;
+    var b=mk("button","chip"+(on?" on":""),c.n);
+    b.type="button";b.title=c.d;
+    b.onclick=function(){
+      var j=st.ch.indexOf(i);
+      if(j>=0)st.ch.splice(j,1);else st.ch.push(i);
+      renderChars();
+    };
+    el.appendChild(b);
+  });
+  var add=mk("button","chip","+ Karakter ekle");
+  add.type="button";
+  add.onclick=function(){
+    var v=prompt("Karakter: İsim — tanım\nörn. Elif — 28 yaşında, kızıl saçlı, mavi hırka, çilli");
+    if(!v)return;
+    var p=v.split("—");
+    var n=(p[0]||"").trim(),d=(p[1]||"").trim();
+    if(!n)return;
+    chars.push({n:n,d:d||n});
+    jset(CHK,chars);
+    renderChars();
+  };
+  el.appendChild(add);
+}
+renderChars();
 
-/* ============ prompt derleme ============ */
-function buildPrompt(){
-  var s=selectedStyle(),im=st.mo===3,q=st.mo===2,r=st.mo===1,out=[];
-  out.push("["+MODES[st.mo]+"] "+$("idea").value.trim());
-  out.push("Stil: "+s[0]+(s[1]?" — "+s[1]:"")+" | "+(RULES[s[2]]||RULES.R));
-  if(r)out.push("Referans modu: "+REFMODES[st.qrf][0]);
-  if(!im){out.push("Süre: "+DURS[st.d]+" sn; shot/klip: "+(SHOTS[st.sh]==="Oto"?"Otomatik":SHOTS[st.sh]+" adet"));
-   if($("sp").value.trim())out.push("Plan: "+$("sp").value.trim());
-   if(st.dl)out.push("Diyalog: "+DLG[st.dl]);if(st.mus)out.push("Müzik: iste");
-   Object.keys(tsel).forEach(function(t){if(tsel[t])out.push("Kural: "+t)})}
-  if(q){out.push("Kuyruk: kare oranı "+QAR[st.qar]+", klip süresi "+(QD[st.qd]==="Oto"?"otomatik":QD[st.qd]+" sn"))+(st.qt?" (kareler dahil)":"");
-   if(st.cams)out.push("Kamera: "+CAMS[st.cams])}
-  if(chars.length)out.push("Karakterler:\n"+chars.map(function(c){return"- "+c}).join("\n"));
-  if(st.c>1)out.push("Varyasyon: "+st.c);
-  return out.join("\n");
+$("csv").onclick=function(){
+  if(!chars.length){$("msg").textContent="Karakter listesi boş.";return}
+  dl("karakterler.csv",chars.map(function(c){return c.n+";"+c.d}).join("\n"),"text/csv");
+};
+$("cdl").onclick=function(){
+  var v=prompt("CSV yapıştır (format: isim;tanım — her satır bir karakter):");
+  if(!v)return;
+  v.split("\n").forEach(function(line){
+    var p=line.trim().split(";");
+    if(p[0]){chars.push({n:p[0].trim(),d:(p[1]||"").trim()||p[0].trim()})}
+  });
+  jset(CHK,chars);renderChars();
+  $("msg").textContent=chars.length+" karakter yüklendi.";$("msg").className="msg ok";
+};
+
+/* ═══ SEKMELER ═══ */
+function tab(n){
+  sh("v1",n===1);sh("v2",n===2);sh("v3",n===3);
+  $("t1").classList.toggle("on",n===1);
+  $("t2").classList.toggle("on",n===2);
+  $("t3").classList.toggle("on",n===3);
+}
+$("t1").onclick=function(){tab(1)};
+$("t2").onclick=function(){tab(2);renderHist()};
+$("t3").onclick=function(){tab(3);renderSettings()};
+
+/* ═══ GÖRSEL SEÇME ═══ */
+var curImg=null;
+$("pick").onclick=function(){$("file").click()};
+$("file").onchange=function(){
+  var f=this.files&&this.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){curImg=rd.result;$("thumb").src=curImg;sh("thumb",true);sh("rm",true)};
+  rd.readAsDataURL(f);
+};
+$("rm").onclick=function(){curImg=null;$("file").value="";$("thumb").removeAttribute("src");sh("thumb",false);sh("rm",false)};
+
+/* ═══ GÖRSEL TANIMI (görme yeteneği olan sağlayıcı) ═══ */
+function describeImage(cb){
+  if(!curImg){$("msg").textContent="Önce 📷 Görsel seç ile bir görsel seçin.";$("msg").className="msg err";return}
+  var p=PROV[cfg.p],key=(cfg.keys[cfg.p]||"").trim();
+  if(cfg.p!==4&&!key){$("msg").textContent="Ayarlar'dan API anahtarı girin.";$("msg").className="msg err";tab(3);return}
+  var model=(cfg.models[cfg.p]||"").trim()||p[2];
+  var b64=curImg.split(",")[1];
+  var mime=(curImg.match(/^data:(.+?);/)||[])[1]||"image/jpeg";
+  $("msg").textContent="Görsel analiz ediliyor...";$("msg").className="msg";
+  var sys="Describe this image concisely for an AI video/image prompt. Include: subject appearance, clothing, pose, setting, lighting, mood. 2-3 sentences max.";
+  if(p[4]==="anthropic"){
+    fetch(p[3]+"v1/messages",{method:"POST",signal:ctrl.signal,headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:model,max_tokens:500,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:"Describe this image."}]}]})}).then(function(r){return r.json()}).then(function(j){cb((j.content||[]).map(function(c){return c.text||""}).join(""))}).catch(function(e){if(e.name!=="AbortError"){$("msg").textContent="Hata: "+e.message;$("msg").className="msg err"}});
+  }else{
+    var url=p[3]+(cfg.p===0?"chat/completions":cfg.p===2?"v1/chat/completions":cfg.p===3?"openai/v1/chat/completions":"v1/chat/completions");
+    fetch(url,{method:"POST",signal:ctrl.signal,headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify({model:model,messages:[{role:"system",content:sys},{role:"user",content:[{type:"text",text:"Describe this image."},{type:"image_url",image_url:{url:curImg}}]}]})}).then(function(r){return r.json()}).then(function(j){cb(((j.choices||[])[0]||{}).message||{}).content||"")}).catch(function(e){if(e.name!=="AbortError"){$("msg").textContent="Hata: "+e.message;$("msg").className="msg err"}});
+  }
+}
+$("im1").onclick=function(){describeImage(function(t){if(t){$("f1").value=t;$("msg").textContent="İlk kare dolduruldu.";$("msg").className="msg ok"}})};
+$("im2").onclick=function(){describeImage(function(t){if(t){$("f2").value=t;$("msg").textContent="Son kare dolduruldu.";$("msg").className="msg ok"}})};
+$("im3").onclick=function(){describeImage(function(t){if(t){$("f1").value=t;$("msg").textContent="Referans tanımı dolduruldu.";$("msg").className="msg ok";sh("fr",true)}})};
+
+/* ═══ PROMPT KURMA ═══ */
+function buildUserPrompt(){
+  var r=st.mo===1,q=st.mo===2,im=st.mo===3;
+  var s=selectedStyle();
+  var lines=[];
+  if(im){
+    lines.push("Image model: "+IMODELS[st.im][0]);
+    lines.push("Aspect ratio: "+IARS[st.iar]);
+    lines.push("Variations: "+COUNTS[st.cnt]);
+    lines.push("Idea: "+$("idea").value.trim());
+    if(s[1])lines.push("Style: "+s[1]);
+    if(curImg)lines.push("Reference image provided (edit/adapt based on it).");
+  }else if(q){
+    lines.push("Clip duration: "+(QD[st.qd]==="Oto"?"auto":QD[st.qd]+" seconds"));
+    lines.push("Clip count: "+QTX[st.qt]);
+    lines.push("Start frame prompt: "+(st.qf?"yes":"no"));
+    lines.push("Reference type: "+QRF[st.qrf][0]);
+    lines.push("Aspect ratio: "+QAR[st.qa]);
+    lines.push("Idea/theme: "+$("idea").value.trim());
+    if(s[1])lines.push("Style: "+s[1]);
+    if($("sp").value.trim())lines.push("Clip plan:\n"+$("sp").value.trim());
+    if(st.qf&&$("f1").value.trim())lines.push("Start frame: "+$("f1").value.trim());
+    if(curImg)lines.push("Character reference image provided — maintain identity.");
+  }else if(r){
+    lines.push("Reference system: "+REFMODES[st.rfm][0]);
+    lines.push("Output format: "+(st.rmd===0?"JSON":"plain text"));
+    var tasks=Object.keys(tsel).filter(function(t){return tsel[t]});
+    if(tasks.length)lines.push("Tasks: "+tasks.join(", "));
+    lines.push("Idea: "+$("idea").value.trim());
+    if(s[1])lines.push("Style: "+s[1]);
+    if(curImg)lines.push("Reference image: [user will upload — analyze from context]");
+    if($("f1").value.trim())lines.push("Additional description: "+$("f1").value.trim());
+  }else{
+    var k=KINDS[st.k][0];
+    lines.push("Video type: "+k+" ("+KINDS[st.k][1]+")");
+    lines.push("Duration: "+DURS[st.d]+" seconds");
+    lines.push("Shot count: "+(SHOTS[st.sh]==="Oto"?"auto":SHOTS[st.sh]));
+    lines.push("Idea: "+$("idea").value.trim());
+    if(s[1])lines.push("Style: "+s[1]);
+    var selChars=st.ch.map(function(i){return chars[i]}).filter(Boolean);
+    if(selChars.length)lines.push("Characters:\n"+selChars.map(function(c){return"- "+c.n+": "+c.d}).join("\n"));
+    if(CAMS[st.ca][1])lines.push("Camera: "+CAMS[st.ca][1]);
+    if(DLG[st.dl][1])lines.push("Dialogue language: "+DLG[st.dl][1]);
+    if(MUS[st.mus][1])lines.push("Music: "+MUS[st.mus][1]);
+    lines.push("Variations: "+COUNTS[st.cnt]);
+    if(k!=="T2VA"&&$("f1").value.trim())lines.push("First frame: "+$("f1").value.trim());
+    if(k==="FL2VA"&&$("f2").value.trim())lines.push("Last frame: "+$("f2").value.trim());
+    if($("sp").value.trim())lines.push("Shot plan:\n"+$("sp").value.trim());
+  }
+  return lines.join("\n");
 }
 
-/* ============ API ============ */
-var ctl=null,btnGo=null;
-function req(provider,text){
-  var p=PROV[cfg.p],ep=p[2],kind=p[3],model=cfg.models[PROV[cfg.p][0]]||$("mdl").value||p[5];
-  var key=cfg.keys[PROV[cfg.p][0]]||$("key1").value;
-  ctl=new AbortController();var to=setTimeout(function(){ctl.abort()},90000);
-  var headers={"Content-Type":"application/json"};var body;
-  if(kind==="anthropic"){headers["x-api-key"]=key;headers["anthropic-version"]="2023-06-01";
-   body={model:model,max_tokens:1600,system:SYS+"\n"+SYSB+"\n"+QKEEP,messages:[{role:"user",content:text}]}}
-  else{headers["Authorization"]="Bearer "+key;
-   if(/openrouter/.test(ep)){headers["HTTP-Referer"]=location.origin;headers["X-Title"]="Prompt Gen"}
-   body={model:model,messages:[{role:"system",content:SYS+"\n"+(st.mo===3?SYSK:st.mo===1?SYSR:st.mo===2?SYSQ:SYSB)+"\n"+QKEEP},{role:"user",content:text}]}}
-  return fetch(ep,{method:"POST",headers:headers,body:JSON.stringify(body),signal:ctl.signal}).then(function(res){
-    clearTimeout(to);if(!res.ok)return res.text().then(function(t){throw new Error(res.status+": "+t.slice(0,160))});
-    return res.json().then(function(j){var txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||(j.content&&j.content[0]&&j.content[0].text)||JSON.stringify(j);$("out").textContent=txt||"(boş yanıt)";return txt})});
+function buildSystem(){
+  var r=st.mo===1,q=st.mo===2,im=st.mo===3;
+  if(im)return IMODELS[st.im][2]?SYSK:SYS;
+  if(q)return SYSQ;
+  if(r)return SYSR;
+  return SYSB+"\n\n"+KH[KINDS[st.k][0]];
 }
-function busy(b){btnGo.disabled=b;$("stop").style.display=b?"":"none";btnGo.textContent=b?"Üretiliyor...":"Başlat"}
-$("go").onclick=function(){var text=buildPrompt();if(!$("key1").value&&!cfg.keys[PROV[cfg.p][0]]){toast("Önce Ayarlar > API anahtarı girin.","bad");tab("3");return}
- btnGo=$("go");busy(true);$("out").textContent="";toast("Model yazıyor...","ok");
- req(PROV[cfg.p][0],text).then(function(txt){busy(false);toast("Hazır. Kopyala ile al.","ok");saveHist(text,txt)}).catch(function(e){busy(false);if(e.name==="AbortError"){toast("Durduruldu.");$("out").textContent=""}else toast("Hata: "+e.message,"bad")})};
-$("stop").onclick=function(){if(ctl)ctl.abort()};
-document.addEventListener("keydown",function(e){if(e.key==="Escape"&&ctl)ctl.abort()});
 
-/* ============ çıktı ============ */
-$("cp").onclick=function(){var t=$("out").textContent;navigator.clipboard&&navigator.clipboard.writeText(t).then(function(){toast("Kopyalandı","ok")})};
-$("cl1").onclick=function(){$("out").textContent="";$("idea").value="";$("sp").value="";chars=[];jset(CHK,[]);renderChars();toast("Temizlendi.")};
-function renderChars(){$("chlist").textContent="";chars.forEach(function(c,i){var d=mk("div","hist",c);var x=mk("button","chip dgr","Sil");x.onclick=function(){chars.splice(i,1);jset(CHK,chars);renderChars()};d.appendChild(x);$("chlist").appendChild(d)});$("chs").style.display=chars.length?"":"none"}
-$("cdl").onclick=function(){var v=$("idea").value.trim();if(!v)return;chars.push(v);jset(CHK,chars);$("idea").value="";renderChars();toast("Karakter eklendi","ok")};
-$("csv").onclick=function(){navigator.clipboard&&navigator.clipboard.writeText(chars.join("\n")).then(function(){toast("Kopyalandı","ok")})};
+/* ═══ API ÇAĞRISI ═══ */
+var ctrl=null;
+function apiCall(sys,user,cb){
+  var p=PROV[cfg.p];
+  var key=(cfg.keys[cfg.p]||"").trim();
+  if(cfg.p!==4&&!key){cb(null,"API anahtarı girilmemiş. Ayarlar → API anahtarı.");tab(3);return}
+  var model=(cfg.models[cfg.p]||"").trim()||p[2];
+  ctrl=new AbortController();
+  var opts={method:"POST",signal:ctrl.signal};
+  if(p[4]==="anthropic"){
+    opts.headers={"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+    opts.body=JSON.stringify({model:model,max_tokens:8000,system:sys,messages:[{role:"user",content:user}]});
+    var aurl=p[3]+"v1/messages";
+    fetch(aurl,opts).then(function(r){
+      if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status+": "+t.slice(0,200))});
+      return r.json();
+    }).then(function(j){
+      cb((j.content||[]).map(function(c){return c.text||""}).join(""),null);
+    }).catch(function(e){
+      if(e.name==="AbortError"){cb(null,"__aborted__")}else{cb(null,e.message)}
+    });
+  }else{
+    var url=p[3]+(cfg.p===0?"chat/completions":cfg.p===2?"v1/chat/completions":cfg.p===3?"openai/v1/chat/completions":"v1/chat/completions");
+    opts.headers={"content-type":"application/json","authorization":"Bearer "+key};
+    opts.body=JSON.stringify({model:model,messages:[{role:"system",content:sys},{role:"user",content:user}]});
+    fetch(url,opts).then(function(r){
+      if(!r.ok)return r.text().then(function(t){
+        var m="HTTP "+r.status;
+        if(r.status===401)m+=" — Anahtar geçersiz";
+        else if(r.status===404)m+=" — Model bulunamadı (Ayarlar'dan model adını kontrol edin)";
+        else if(r.status===429)m+=" — Kota/limit aşıldı";
+        throw new Error(m+": "+t.slice(0,200));
+      });
+      return r.json();
+    }).then(function(j){
+      cb((((j.choices||[])[0]||{}).message||{}).content||"",null);
+    }).catch(function(e){
+      if(e.name==="AbortError"){cb(null,"__aborted__")}else{cb(null,e.message)}
+    });
+  }
+}
 
-/* ============ geçmiş ============ */
-var hf=0;
-function saveHist(t,r){hist.unshift({id:String(Date.now()),t:t,r:(r||"").slice(0,400),mo:st.mo});hist=hist.slice(0,100);jset(HK,hist)}
-function renderHist(){$("hl").textContent="";var list=hist.filter(function(o){return hf===0||o.mo===hf-1});list.forEach(function(o){var c=mk("div","hist");var pre=mk("pre",null,o.t.slice(0,300));var ac=mk("div","ac");var a=mk("button","chip","Bu ayarı yükle");a.onclick=function(){try{var s=JSON.parse(o.t);Object.keys(s).forEach(function(k){if(st[k]!=null)st[k]=s[k]});upd();tab("1");toast("Ayarlar yüklendi","ok")}catch(e){$("out").textContent=o.t;tab("1")}};var d=mk("button","chip dgr","Sil");d.onclick=function(){hist=hist.filter(function(x){return x.id!==o.id});jset(HK,hist);renderHist()};var l=mk("button","chip","İstem");l.onclick=function(){$("out").textContent=o.t;tab("1")};ac.appendChild(a);ac.appendChild(l);ac.appendChild(d);c.appendChild(mk("div","hd",MODES[o.mo]+" · "+new Date(Number(o.id)).toLocaleTimeString("tr")));c.appendChild(pre);c.appendChild(ac);$("hl").appendChild(c)})}
-function renderHF(){$("hf").textContent="";["Tümü"].concat(MODES).forEach(function(n,i){var b=mk("button","chip"+(hf===i?" on":""),n);b.onclick=function(){hf=i;renderHF();renderHist()};$("hf").appendChild(b)})}
-$("clrH").onclick=function(){if(confirm("Geçmiş silinsin mi?")){hist=[];jset(HK,hist);renderHist()}};
-renderHF();
-
-/* ============ ayarlar ============ */
-function provChip(){$("provs").textContent="";PROV.forEach(function(p,i){var b=mk("button","chip"+(cfg.p===i?" on":""),p[0]);b.onclick=function(){cfg.p=i;provChip();$("mdl").value=cfg.models[p[0]]||p[5]};$("provs").appendChild(b)});$("mdl").value=cfg.models[PROV[cfg.p][0]]||PROV[cfg.p][5];$("key1").value=cfg.keys[PROV[cfg.p][0]]||""}
-provChip();
-$("sv").onclick=function(){cfg.models[PROV[cfg.p][0]]=$("mdl").value;cfg.keys[PROV[cfg.p][0]]=$("key1").value;jset(CK,cfg);say("msg3","Kaydedildi. Anahtar bu cihazda.","ok")};
-function csList(){$("cslist").textContent="";cstyles.forEach(function(c,i){var b=mk("button","chip",c.n);b.onclick=function(){if(confirm(c.n+" silinsin mi?")){cstyles.splice(i,1);jset(CSK,cstyles);buildStyles();csList()}};$("cslist").appendChild(b)})}
-csList();
-$("csadd").onclick=function(){var n=$("csname").value.trim(),t=$("csdesc").value.trim();if(!n||!t){say("msg3","Ad ve açıklama gerekli.","bad");return}cstyles.push({n:n,t:t,f:CSF[csf]});jset(CSK,cstyles);$("csname").value="";$("csdesc").value="";buildStyles();csList();say("msg3","Stil eklendi","ok")};
-
-/* ============ görsel + JSON yedek ============ */
-var pickTarget=null;
-$("im1").onclick=function(){pickTarget="im1";$("file").click()};
-$("im2b").onclick=function(){pickTarget="im2";$("file").click()};
-$("file").onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){if(pickTarget==="im1"){var v=$("im1v");v.textContent=f.name+" ("+(f.size/1024|0)+" KB)";v.className="msg ok"}else{var v2=$("im2v");v2.textContent=f.name;v2.className="msg ok"}};r.readAsDataURL(f);e.target.value=""};
-$("exp").onclick=function(){var blob=new Blob([JSON.stringify({cfg:cfg,st:st,chars:chars,cstyles:cstyles,hist:hist},null,2)],{type:"application/json"});var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="prompt-ayar.json";a.click();say("msg4","İndirildi","ok")};
-$("imp").onclick=function(){$("jfile").click()};
-$("jfile").onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var j=JSON.parse(r.result);if(j.cfg)cfg=j.cfg;if(j.st)Object.keys(j.st).forEach(function(k){st[k]=j.st[k]});if(j.chars)chars=j.chars;if(j.cstyles)cstyles=j.cstyles;jset(CK,cfg);jset(CHK,chars);jset(CSK,cstyles);buildStyles();renderChars();provChip();upd();say("msg4","Yüklendi","ok")}catch(er){say("msg4","Geçersiz dosya","bad")}};r.readAsText(f);e.target.value=""};
-
-/* migrasyon (tek seferlik) */
-if(!jget("vp_imported_pu",0)){var oh=jget("pu_hist_v1",[]);if(Array.isArray(oh)&&oh.length){oh.forEach(function(o){if(o.mo==null)o.mo=3;hist.push(o)});hist.sort(function(a,b){return(Number(b.id)||0)-(Number(a.id)||0)});jset(HK,hist.slice(0,100))}jset("vp_imported_pu",1)}
-})();
-</script>
-</body>
-</html>
+/* ═══ ÜRETİM (go/stop) ═══ */
+function go(){
+  if(!$("idea").value.trim()){$("msg").textContent="Fikir alanını doldurun.";$("msg").className="msg err";$("idea").focus();return}
+  $("msg").textContent="Üretiliyor...";$("msg").className="msg";
+  $("go").disabled=true;sh("stop",true);
+  var sys=buildSystem(),usr=buildUserPrompt();
+  apiCall(sys,usr,function(out,err){
+    $("go").disabled=false;sh("stop",false);ctrl=null;
+    if(err){
+      if(err==="__aborted__"){$("msg").textContent="Durduruldu.";$("msg").className="msg"}
+      else{$("msg").textContent="Hata: "+err;$("msg").className="msg err"}
+      return;
+    }
+    if(!out){$("msg").textContent="Boş yanıt alındı.";$("msg
