@@ -35,12 +35,17 @@ textarea.sm{min-height:60px}
 .lint.w{color:var(--wn)}
 .btn{padding:8px 14px;border-radius:10px;border:1px solid var(--bd);background:transparent;color:var(--tx);font-size:14px}
 .btn.ac{background:var(--ac);color:var(--ac2);border-color:var(--ac)}
+.btn.fav{border-color:var(--wn);color:var(--wn)}
 .edit{margin-top:12px;display:none}
 .edit.open{display:block}
 .edit .row{margin-bottom:8px}
 .msg{color:var(--mu);margin-top:14px;font-size:14px;word-wrap:break-word}
 .hid{position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}
 #styles{max-height:168px;overflow-y:auto;padding:2px}
+.thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.thumb{position:relative;width:96px;height:96px;border-radius:12px;overflow:hidden;border:1px solid var(--bd);background:var(--card)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:999px;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:13px;line-height:1;cursor:pointer}
 /* ── Gece arayüz katmanı ── */
 body{background:radial-gradient(1100px 560px at 88% -12%,color-mix(in srgb,var(--ac3) 13%,transparent),transparent 62%),radial-gradient(900px 520px at -12% 18%,color-mix(in srgb,var(--ac) 12%,transparent),transparent 58%),var(--bg);background-attachment:fixed}
 body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.035;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E")}
@@ -104,10 +109,10 @@ h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:
 <div class="lb">Kare oranı</div><div class="row" id="qar"></div>
 </div>
 <div id="iw">
-<div class="lb">Referans görsel (opsiyonel)</div>
-<div class="row"><button class="btn" id="pick" type="button">Görsel seç</button></div>
-<input type="file" id="file" accept="image/*" class="hid">
-<div id="refbox" style="display:none"><img id="thumb" alt="" style="max-width:100%;max-height:200px;border-radius:12px;margin-top:10px;display:block"><div class="row" style="margin-top:8px"><button class="btn" id="rm" type="button">Kaldır</button></div><div class="lb">Referans nasıl kullanılsın?</div><div class="row" id="refmodes"></div></div>
+<div class="lb">Referans görseller (opsiyonel, en fazla 3)</div>
+<div class="row"><button class="btn" id="pick" type="button">Görsel ekle</button></div>
+<input type="file" id="file" accept="image/*" class="hid" multiple>
+<div id="refbox" style="display:none"><div id="thumbs" class="thumbs"></div><div class="row" style="margin-top:8px"><button class="btn" id="rm" type="button">Tümünü kaldır</button></div><div class="lb">Referans nasıl kullanılsın?</div><div class="row" id="refmodes"></div></div>
 <div class="lb">Hedef model</div><div class="row" id="models"></div>
 <div class="lb">En-boy oranı</div><div class="row" id="ars"></div>
 </div>
@@ -141,6 +146,8 @@ h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:
 <input type="text" id="url" autocapitalize="off" spellcheck="false" placeholder="http://localhost:1234/v1">
 <label for="mdl">Model adı</label>
 <input type="text" id="mdl" autocapitalize="off" spellcheck="false">
+<label for="vmdl">📷 Görsel analiz modeli (boş = ana model)</label>
+<input type="text" id="vmdl" autocapitalize="off" spellcheck="false" placeholder="örn. meta-llama/llama-4-scout-17b-16e-instruct">
 <button class="go" id="sv">Kaydet</button>
 <div class="msg" id="sm"></div>
 <div class="msg" id="help"></div>
@@ -173,7 +180,7 @@ var PROV=[
 var CK="pu_cfg_v1",HK="vp_hist_v1";
 function jget(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}}
 function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-var cfg=jget(CK,{p:0,keys:{},models:{}});cfg.keys=cfg.keys||{};cfg.models=cfg.models||{};if(!(cfg.p>=0&&cfg.p<PROV.length))cfg.p=0;cfg.theme=cfg.theme||"Gece";cfg.appear=cfg.appear||"koyu";
+var cfg=jget(CK,{p:0,keys:{},models:{}});cfg.keys=cfg.keys||{};cfg.models=cfg.models||{};cfg.vmodels=cfg.vmodels||{};if(!(cfg.p>=0&&cfg.p<PROV.length))cfg.p=0;cfg.theme=cfg.theme||"Gece";cfg.appear=cfg.appear||"koyu";
 var hist=jget(HK,[]);if(!Array.isArray(hist))hist=[];
 if(!jget("vp_imported_pu",0)){
   var oldH=jget("pu_hist_v1",[]);
@@ -342,7 +349,7 @@ L2VA:"Mode L2VA: <Picture 1> is the final frame and belongs to the last shot, no
 var SYSR="You write prompts for the MiniMax H3 video model in the full-reference format. Output exactly six sections in this order, each starting with its name and a colon, separated by blank lines: subject_definitions, summary, retention_analysis, detailed_description, overall_soundscape, non_diegetic_music. Everything in English except dialogue/lyrics inside <d> and text visible in the scene.\n"+
 "Labels: <Subject N> = reusable visible content (person, animal, object, scene, clothing, prop, style, action, pose); one line each: what it denotes, reference role, main features, source assets. <Picture N> only when an image is a concrete frame anchor (first/last/key frame, storyboard); an image that only defines a character, scene or style is cited inside the Subject line instead. <Video N> only for whole-video relations (edit source, continuation, cut/pacing structure); reused people or objects from a video still become Subjects. <Audio N> = copied or referenced audio; when bound to a target speaker write e.g. '<Audio 1> is the voice-timbre reference for <Subject 1> (S1)'. Video and Audio are numbered independently. A label keeps one meaning in every section.\n"+
 "summary: one short paragraph starting with [task types joined by ' + '] chosen from: keyframe completion, reference generation, video editing, video continuation, audio reuse, audio reference (no repeats; a video giving only camera/cut/rhythm is reference generation). No new labels. For editing start with 'The target video is an edited version of <Video 1>.'\n"+
-"retention_analysis: one line per label. Subject: '<Subject 1> (appears in [Shot 1], [Shot 3]): fully_preserved - ...'. Picture: '<Picture 2> ([Shot 1] first frame): ...'. Video: '<Video 1> (cut and pacing structure): weak_reference - ...'. Visible markers: fully_preserved, partially_preserved, attribute_transfer, weak_reference. Audio markers: fully_copy, partially_copy, reference, weak_reference. New actions or backgrounds are not fidelity losses. New actions or backgrounds are not fidelity losses. Never write (Sx) here.\n"+
+"retention_analysis: one line per label. Subject: '<Subject 1> (appears in [Shot 1], [Shot 3]): fully_preserved - ...'. Picture: '<Picture 2> ([Shot 1] first frame): ...'. Video: '<Video 1> (cut and pacing structure): weak_reference - ...'. Visible markers: fully_preserved, partially_preserved, attribute_transfer, weak_reference. Audio markers: fully_copy, partially_copy, reference, weak_reference. New actions or backgrounds are not fidelity losses. Never write (Sx) here.\n"+
 "detailed_description: 350-500 words (more if dialogue-dense). First 1-2 sentences state the style BEFORE [Shot 1]. Each shot: composition, subject appearance and position, environment and lighting, actions, camera movement, current sound, and where each reference takes effect. Insert labels at first appearance and reuse them; anchors read 'the shot begins from <Picture 1>'. A speaking subject: '<Subject 2> (S1) turns and says, <d>[English] ...</d>' (off-screen speakers keep the form and say off-screen). Verbal cues inside directly reused BGM use <Audio N> as source, no (Sx). If only timbre or delivery is referenced, do not carry the original dialogue. Use [unclear] for unintelligible reused speech; plain punctuation only.\n"+
 "Audio relations go only in the matching section: ambience in overall_soundscape, score in non_diegetic_music, e.g. '<Audio 2> is directly reused as the complete audience-only score.'";
 
@@ -441,7 +448,16 @@ function buildStyles(){
 if(st.si==null)st.si=0;if(st.m==null)st.m=0;if(st.a==null)st.a=0;if(st.r==null)st.r=0;if(st.hf==null)st.hf=0;if(st.cf==null)st.cf=0;
 styleLists();
 upd();
-var refImg=null;
+var refImgs=[];
+function renderRefs(){
+  var box=$("thumbs");box.textContent="";
+  refImgs.forEach(function(img,i){
+    var d=mk("div","thumb"),im=mk("img");im.src="data:"+img.m+";base64,"+img.d;im.alt="Referans "+(i+1);
+    var x=mk("button",null,"✕");x.type="button";x.title="Kaldır";x.onclick=function(){refImgs.splice(i,1);renderRefs()};
+    d.appendChild(im);d.appendChild(x);box.appendChild(d);
+  });
+  $("refbox").style.display=refImgs.length?"":"none";
+}
 chips("models",IMODELS,"m",function(x){return x[0]});
 chips("ars",IARS,"a",function(x){return x});
 chips("refmodes",REFMODES,"r",function(x){return x[0]});
@@ -463,18 +479,25 @@ $("csadd").onclick=function(){
 renderCS();
 $("pick").onclick=function(){$("file").click()};
 $("file").onchange=function(){
-  var f=this.files&&this.files[0],inp=this;if(!f)return;
-  var u=URL.createObjectURL(f),im=new Image();
-  im.onload=function(){
-    var M=1024,w=im.naturalWidth,h=im.naturalHeight,k=Math.min(1,M/Math.max(w,h));
-    var c=document.createElement("canvas");c.width=Math.round(w*k);c.height=Math.round(h*k);
-    c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-    var du=c.toDataURL("image/jpeg",0.85);refImg={m:"image/jpeg",d:du.split(",")[1]};$("thumb").src=du;$("refbox").style.display="";URL.revokeObjectURL(u);
-  };
-  im.onerror=function(){$("msg").textContent="Görsel okunamadı. JPG veya PNG dene."};
-  im.src=u;inp.value="";
+  var inp=this,files=Array.prototype.slice.call(inp.files||[]);inp.value="";
+  if(!files.length)return;
+  var room=3-refImgs.length;
+  if(room<=0){$("msg").textContent="En fazla 3 referans görsel ekleyebilirsin.";return}
+  if(files.length>room)$("msg").textContent="Sadece ilk "+room+" görsel eklendi (sınır 3).";
+  files.slice(0,room).forEach(function(f){
+    var u=URL.createObjectURL(f),im=new Image();
+    im.onload=function(){
+      var M=1024,w=im.naturalWidth,h=im.naturalHeight,k=Math.min(1,M/Math.max(w,h));
+      var c=document.createElement("canvas");c.width=Math.round(w*k);c.height=Math.round(h*k);
+      c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+      refImgs.push({m:"image/jpeg",d:c.toDataURL("image/jpeg",0.85).split(",")[1]});
+      renderRefs();URL.revokeObjectURL(u);
+    };
+    im.onerror=function(){$("msg").textContent="Görsel okunamadı. JPG veya PNG dene.";URL.revokeObjectURL(u)};
+    im.src=u;
+  });
 };
-$("rm").onclick=function(){refImg=null;$("refbox").style.display="none"};
+$("rm").onclick=function(){refImgs=[];renderRefs()};
 var KCOL={1:"#3b82c4",2:"#3aa76d",3:"#d9822b"},KNM={1:"Video",2:"Kuyruk",3:"Görsel"};
 function kindOf(it){return it.mo===2?2:(it.mo===0||it.mo===1)?1:3}
 function nsh(){var c=$("sp").value.split("\n").filter(function(x){return x.trim()}).length;return c||SHOTS[st.sh]}
@@ -523,22 +546,32 @@ var NOKEY="Önce Ayarlar sekmesinden API anahtarını gir.";
 function needKey(){return !(cfg.keys[PROV[cfg.p].k])&&PROV[cfg.p].k!=="lmstudio"}
 if(needKey())$("msg").textContent=NOKEY;
 
-function msgc(p,img){return img?[{type:"image_url",image_url:{url:"data:"+img.m+";base64,"+img.d}},{type:"text",text:p}]:p}
+function arrImg(img){return !img?[]:Array.isArray(img)?img:[img]}
+function msgc(p,img){var a=arrImg(img);return a.length?a.map(function(x){return{type:"image_url",image_url:{url:"data:"+x.m+";base64,"+x.d}}}).concat([{type:"text",text:p}]):p}
 var ctls=[],busyN=0;
 function stopVis(){var b=$("stop");if(b)b.style.display=busyN>0?"":"none"}
 function stopAll(){ctls.slice().forEach(function(c){c.abort()})}
-async function llm(prompt,img){
-  var ctl=new AbortController();ctls.push(ctl);busyN++;stopVis();
-  try{return await llm0(prompt,img,ctl.signal)}
-  finally{busyN--;ctls.splice(ctls.indexOf(ctl),1);stopVis()}
+function showErr(el,prefix,e,retry){
+  el.textContent=(/^Durduruldu/.test(e.message)?"":prefix)+e.message;
+  if(retry&&!/^Durduruldu/.test(e.message)){
+    var b=mk("button","btn","Tekrar dene");b.style.marginLeft="8px";b.onclick=function(){el.textContent="";retry()};
+    el.appendChild(b);
+  }
 }
-async function llm0(prompt,img,signal){
-  var p=PROV[cfg.p],key=cfg.keys[p.k],model=cfg.models[p.k]||p.m;
+async function llm(prompt,img,vision){
+  var ctl=new AbortController();ctls.push(ctl);busyN++;stopVis();
+  var to=setTimeout(function(){ctl._timeout=true;ctl.abort()},120000);
+  try{return await llm0(prompt,img,ctl.signal,vision)}
+  catch(e){if(ctl._timeout)throw new Error("Zaman aşımı (120 sn). Tekrar dene.");throw e}
+  finally{clearTimeout(to);busyN--;ctls.splice(ctls.indexOf(ctl),1);stopVis()}
+}
+async function llm0(prompt,img,signal,vision){
+  var p=PROV[cfg.p],key=cfg.keys[p.k],model=(vision&&cfg.vmodels&&cfg.vmodels[p.k])||cfg.models[p.k]||p.m,imgs=arrImg(img);
   if(!key&&p.k!=="lmstudio")throw new Error(NOKEY);
   var url,opt;
   if(p.k==="gemini"){
     url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent";
-    opt={method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify({contents:[{parts:(img?[{inline_data:{mime_type:img.m,data:img.d}}]:[]).concat([{text:prompt}])}]})};
+    opt={method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify({contents:[{parts:(imgs.length?imgs.map(function(x){return{inline_data:{mime_type:x.m,data:x.d}}}):[]).concat([{text:prompt}])}]})};
   }else if(p.k==="lmstudio"){
     url=((cfg.urls&&cfg.urls[p.k])||"http://localhost:1234/v1")+"/chat/completions";
     opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+(key||"lm-studio")},body:JSON.stringify({model:model,messages:[{role:"user",content:msgc(prompt,img)}],temperature:0.8})};
@@ -550,7 +583,7 @@ async function llm0(prompt,img,signal){
     opt={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:model,messages:[{role:"user",content:msgc(prompt,img)}]})};
   }else{
     url="https://api.anthropic.com/v1/messages";
-    opt={method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:model,max_tokens:6000,messages:[{role:"user",content:img?[{type:"image",source:{type:"base64",media_type:img.m,data:img.d}},{type:"text",text:prompt}]:prompt}]})};
+    opt={method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:model,max_tokens:6000,messages:[{role:"user",content:imgs.length?imgs.map(function(x){return{type:"image",source:{type:"base64",media_type:x.m,data:x.d}}}).concat([{type:"text",text:prompt}]):prompt}]})};
   }
   var r,j=null;
   opt.signal=signal;
@@ -561,8 +594,11 @@ async function llm0(prompt,img,signal){
   try{j=await r.json()}catch(e){}
   if(signal.aborted)throw new Error("Durduruldu.");
   if(!r.ok){
-    var m=j&&(j.error&&(j.error.message||j.error)||j.message)||"";
-    throw new Error("HTTP "+r.status+(m?": "+(typeof m==="string"?m:JSON.stringify(m)):""));
+    var m=j&&(j.error&&(j.error.message||j.error)||j.message)||"",hm="HTTP "+r.status;
+    if(r.status===429)hm="Kota/limit aşıldı (429). Biraz bekleyip tekrar dene.";
+    else if(r.status===401||r.status===403)hm="Anahtar geçersiz/yetkisiz ("+r.status+").";
+    else if(r.status===404)hm="Model bulunamadı (404). Model adını kontrol et.";
+    throw new Error(hm+(m?": "+(typeof m==="string"?m:JSON.stringify(m)):""));
   }
   var t="";
   if(p.k==="gemini"){var ps=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts||[];t=ps.map(function(x){return x.text||""}).join("")}
@@ -591,8 +627,15 @@ function card(item,inHist){
   var cp=mk("button","btn",item.mo===2?"Hepsini kopyala":"Kopyala");cp.onclick=function(){copy(item.text,cp)};
   var ed=mk("button","btn","Düzenle");
   var fx=mk("button","btn ac","Hataları düzelt");
+  var fv=mk("button","btn fav",item.fav?"★ Favori":"☆ Favori");
+  fv.onclick=function(){
+    item.fav=!item.fav;
+    for(var i=0;i<hist.length;i++){if(hist[i].id===item.id)hist[i].fav=item.fav}
+    saveH();fv.textContent=item.fav?"★ Favori":"☆ Favori";
+    if(inHist&&st.hf===4)renderHist();
+  };
   var nx=mk("button","btn","Sonraki sahne");
-  r.appendChild(cp);r.appendChild(ed);r.appendChild(fx);if(kd===1)r.appendChild(nx);
+  r.appendChild(cp);r.appendChild(ed);r.appendChild(fx);r.appendChild(fv);if(kd===1)r.appendChild(nx);
   if(inHist){var del=mk("button","btn","Sil");del.onclick=function(){hist=hist.filter(function(h){return h.id!==item.id});saveH();renderHist()};r.appendChild(del)}
   d.appendChild(r);
   var qc=mk("div","row");qc.style.marginTop="8px";
@@ -644,7 +687,7 @@ function card(item,inHist){
       item.text=t;pre.textContent=t;
       for(var i=0;i<hist.length;i++){if(hist[i].id===item.id)hist[i].text=t}
       saveH();inp.value="";ms.textContent="Güncellendi.";showL();
-    }catch(e){ms.textContent=(/^Durduruldu/.test(e.message)?"":"Hata: ")+e.message}
+    }catch(e){showErr(ms,"Hata: ",e,function(){apply(cmd)})}
     ap.disabled=fx.disabled=false;
   }
   ap.onclick=function(){apply()};
@@ -659,7 +702,7 @@ function card(item,inHist){
       $("f1").value=t.trim();$("idea").value="";tab(1);
       $("msg").textContent="Önceki sahnenin son karesi, yeni sahnenin ilk karesi (I2VA) olarak dolduruldu. Yeni sahne fikrini yaz.";
       $("idea").focus();window.scrollTo(0,0);
-    }catch(e){ms.textContent=(/^Durduruldu/.test(e.message)?"":"Hata: ")+e.message;box.className="edit open"}
+    }catch(e){showErr(ms,"Hata: ",e,function(){nx.onclick()});box.className="edit open"}
     nx.disabled=false;nx.textContent="Sonraki sahne";
   };
   return d;
@@ -667,11 +710,15 @@ function card(item,inHist){
 function renderHist(){
   var l=$("hl");l.textContent="";
   if(!hist.length){l.appendChild(mk("div","msg","Henüz kayıtlı prompt yok."));return}
-  var want=[0,3,1,2][st.hf],shown=0;
-  hist.forEach(function(h){if(want&&kindOf(h)!==want)return;shown++;l.appendChild(card(h,true))});
-  if(!shown)l.appendChild(mk("div","msg","Bu türde kayıt yok."));
+  var fav=st.hf===4,want=[0,3,1,2,0][st.hf],shown=0;
+  hist.forEach(function(h){
+    if(fav&&!h.fav)return;
+    if(!fav&&want&&kindOf(h)!==want)return;
+    shown++;l.appendChild(card(h,true));
+  });
+  if(!shown)l.appendChild(mk("div","msg",fav?"Favori kayıt yok.":"Bu türde kayıt yok."));
 }
-chips("hf",["Hepsi","🟧 Görsel","🟦 Video","🟩 Kuyruk"],"hf",function(x){return x},renderHist);
+chips("hf",["Hepsi","🟧 Görsel","🟦 Video","🟩 Kuyruk","⭐ Favoriler"],"hf",function(x){return x},renderHist);
 $("clr").onclick=function(){
   var b=$("clr");
   if(b.dataset.s==="1"){hist=[];saveH();renderHist();b.dataset.s="";b.textContent="Geçmişi temizle";return}
@@ -690,12 +737,13 @@ function showProv(){
   var p=PROV[cfg.p];
   $("key").value=cfg.keys[p.k]||"";
   $("mdl").value=cfg.models[p.k]||p.m;
+  $("vmdl").value=cfg.vmodels[p.k]||"";
   $("help").textContent=p.h;
   var loc=p.k==="lmstudio";
   $("url").value=(cfg.urls&&cfg.urls[p.k])||"http://localhost:1234/v1";
   sh("url",loc);sh("urll",loc);sh("key",!loc);sh("keyl",!loc);
 }
-chips("provs",PROV,"p_dummy",function(x){return x.n},function(i){cfg.p=i;showProv()});
+chips("provs",PROV,"p_dummy",function(x){return x.n},function(i){cfg.p=i;showProv();jset(CK,cfg)});
 (function(){[].forEach.call($("provs").children,function(c,j){c.className="chip"+(j===cfg.p?" on":"")})})();
 showProv();
 st.th=Math.max(0,Object.keys(THEMES).indexOf(cfg.theme||"Gece"));
@@ -706,6 +754,7 @@ $("sv").onclick=function(){
   var p=PROV[cfg.p];
   cfg.keys[p.k]=$("key").value.trim();
   cfg.models[p.k]=$("mdl").value.trim()||p.m;
+  cfg.vmodels[p.k]=$("vmdl").value.trim();
   if(p.k==="lmstudio"){cfg.urls=cfg.urls||{};cfg.urls[p.k]=$("url").value.trim().replace(/\/+$/,"")||"http://localhost:1234/v1"}
   jset(CK,cfg);$("sm").textContent="Kaydedildi. “Üret” sekmesine dönebilirsin.";
 };
@@ -717,15 +766,18 @@ function pick(cb,btn){
     if(needKey()){msg.textContent=NOKEY;return}
     var o=btn.textContent;btn.textContent="Analiz ediliyor…";btn.disabled=true;
     var u=URL.createObjectURL(f),im=new Image();
-    im.onload=async function(){
+    im.onload=function(){
       var s=Math.min(1,1024/Math.max(im.width,im.height)),c=document.createElement("canvas");
       c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
       c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);
-      try{
-        var t=await llm("Describe this image for a video prompt in 2-4 plain English sentences: subjects (age range, hair, clothing, expression), setting, composition and framing, lighting, color palette, visual style. Output only the description.",{m:"image/jpeg",d:c.toDataURL("image/jpeg",0.85).split(",")[1]});
-        cb(t.trim());msg.textContent="";
-      }catch(e){msg.textContent="Görsel analizi hatası: "+e.message}
-      btn.textContent=o;btn.disabled=false;
+      var imgObj={m:"image/jpeg",d:c.toDataURL("image/jpeg",0.85).split(",")[1]};
+      var desc="Describe this image for a video prompt in 2-4 plain English sentences: subjects (age range, hair, clothing, expression), setting, composition and framing, lighting, color palette, visual style. Output only the description.";
+      async function run(){
+        try{var t=await llm(desc,imgObj,true);cb(t.trim());msg.textContent=""}
+        catch(e){showErr(msg,"Görsel analizi hatası: ",e,function(){run()})}
+        btn.textContent=o;btn.disabled=false;
+      }
+      run();
     };
     im.onerror=function(){msg.textContent="Görsel açılamadı.";btn.textContent=o;btn.disabled=false};
     im.src=u;
@@ -776,21 +828,21 @@ async function goImage(){
     (sty[2]!=="R"?"\nIMPORTANT: this is NOT photorealistic. Ignore any wording in the structure about photorealism, camera lens, film grade or real skin texture. Describe everything in the medium of the chosen style (painted, drawn or animated), and replace lens and camera details with composition and rendering details. Do not use the words photorealistic, photograph, 35mm or 8k.":"")+
     (cht?"\nRecurring characters (copy each description identically):\n"+cht:"")+
     (fixed?"\nAlways include these fixed rules naturally: "+fixed:"")+
-    (refImg?"\n\nREFERENCE IMAGE ATTACHED. "+REFMODES[st.r][1]+" Study the image carefully. Never identify or name any real person; describe only visible features. Preserve the apparent age, species, identity and distinctive features of every subject in the reference; do not age up or age down anyone.":"")+
+    (refImgs.length?"\n\nREFERENCE IMAGES ATTACHED ("+refImgs.length+"). "+REFMODES[st.r][1]+" Study the images carefully. Never identify or name any real person; describe only visible features. Preserve the apparent age, species, identity and distinctive features of every subject in the reference; do not age up or age down anyone.":"")+
     "\n\nUser idea (may be Turkish): "+idea+"\n\nWrite "+n+" distinct variation(s) (vary setting, outfit, lighting or palette while keeping the idea). Output ONLY the prompts, no preface. If more than one, separate them with a line containing only =====";
   go.disabled=true;
   var t0=Date.now(),tm=setInterval(function(){msg.textContent="Üretiliyor… "+Math.round((Date.now()-t0)/1000)+" sn"},500);
   msg.textContent="Üretiliyor…";
   try{
-    var raw=await llm(prompt,refImg);
-    var items=split(raw).map(function(p,k){return{id:Date.now()+"-"+k,text:p,idea:idea+(refImg?" (+görsel)":""),model:mdl[0]+" · "+sty[0],mo:3,dur:null}});
+    var raw=await llm(prompt,refImgs.length?refImgs:null);
+    var items=split(raw).map(function(p,k){return{id:Date.now()+"-"+k,text:p,idea:idea+(refImgs.length?" (+görsel)":""),model:mdl[0]+" · "+sty[0],mo:3,dur:null}});
     items.slice().reverse().forEach(function(it){hist.unshift(it)});
     saveH();
     var out=$("out");out.textContent="";
     items.forEach(function(it){out.appendChild(card(it,false))});
     msg.textContent="Hazır ve geçmişe kaydedildi.";
   }catch(e){
-    msg.textContent=(/^Durduruldu/.test(e.message)?"":"Hata: ")+e.message;
+    showErr(msg,"Hata: ",e,goImage);
   }
   clearInterval(tm);go.disabled=false;
 }
@@ -844,7 +896,7 @@ async function goQueue(){
     items.forEach(function(it){out.appendChild(card(it,false))});
     msg.textContent=bad?"Hazır, ama kare sayısı klip sayısıyla uyuşmuyor. Gerekirse yeniden üret.":"Hazır ve geçmişe kaydedildi.";
   }catch(e){
-    msg.textContent=(/^Durduruldu/.test(e.message)?"":"Hata: ")+e.message;
+    showErr(msg,"Hata: ",e,goQueue);
   }
   clearInterval(tm);go.disabled=false;
 }
@@ -891,7 +943,7 @@ go.onclick=async function(){
     items.forEach(function(it){out.appendChild(card(it,false))});
     msg.textContent="Hazır ve geçmişe kaydedildi.";
   }catch(e){
-    msg.textContent=(/^Durduruldu/.test(e.message)?"":"Hata: ")+e.message;
+    showErr(msg,"Hata: ",e,function(){go.onclick()});
   }
   clearInterval(tm);go.disabled=false;
 };
