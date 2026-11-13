@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="VideoPrompt">
+<meta name="theme-color" content="#070b14">
 <style>
-:root{--bg:#faf6f3;--card:#fff;--tx:#241a1f;--mu:#7a6a72;--ac:#e0457b;--ac2:#fff;--bd:#eadfe3;--wn:#b8641a;--ok:#2f8f5b;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#17120f;--card:#231c20;--tx:#f5ecef;--mu:#a8979f;--ac:#ff6a9c;--ac2:#1a0f14;--bd:#3a2f35;--wn:#f0a85c;--ok:#6fd49b;color-scheme:dark}}
+:root{--bg:#070b14;--card:#0e1522;--tx:#e9eefb;--mu:#8d99b3;--ac:#4f8cff;--ac2:#06101f;--bd:#1d2839;--wn:#f5a524;--ok:#34d399;--dgr:#f87171;--ac3:#ff4fa3;--mode:#4f8cff;color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--tx);font:16px/1.45 -apple-system,system-ui,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
@@ -41,6 +41,27 @@ textarea.sm{min-height:60px}
 .msg{color:var(--mu);margin-top:14px;font-size:14px;word-wrap:break-word}
 .hid{position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}
 #styles{max-height:168px;overflow-y:auto;padding:2px}
+/* ── Gece arayüz katmanı ── */
+body{background:radial-gradient(1100px 560px at 88% -12%,color-mix(in srgb,var(--ac3) 13%,transparent),transparent 62%),radial-gradient(900px 520px at -12% 18%,color-mix(in srgb,var(--ac) 12%,transparent),transparent 58%),var(--bg);background-attachment:fixed}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.035;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E")}
+main{position:relative;z-index:1}
+*{scrollbar-width:thin;scrollbar-color:var(--ac) var(--card)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--card)}
+::-webkit-scrollbar-thumb{background:linear-gradient(var(--ac),var(--ac3));border-radius:999px;border:2px solid var(--card)}
+::-webkit-scrollbar-thumb:hover{background:var(--ac)}
+.tabs{position:sticky;top:0;z-index:20;background:var(--bg);background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:8px 0;margin-bottom:10px}
+.tab,.chip,.btn,.go{cursor:pointer;transition:transform .12s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease}
+.tab:hover,.chip:hover,.btn:hover{border-color:var(--ac)}
+.chip:active,.btn:active{transform:scale(.96)}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--ac3);margin-right:9px;box-shadow:0 0 14px var(--ac3);vertical-align:middle}
+.card{box-shadow:0 10px 34px rgba(0,0,0,.20);animation:fade .26s ease}
+#go{background:linear-gradient(135deg,var(--mode),color-mix(in srgb,var(--mode) 72%,var(--ac3)));box-shadow:0 8px 26px color-mix(in srgb,var(--mode) 30%,transparent)}
+#go:hover{box-shadow:0 10px 32px color-mix(in srgb,var(--mode) 42%,transparent)}
+.msg.ok{color:var(--ok)}.msg.err{color:var(--dgr)}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -99,6 +120,7 @@ textarea.sm{min-height:60px}
 <textarea id="styleRules" class="sm" readonly></textarea>
 <label for="fixed">Kendi sabit kurallarım (isteğe bağlı, her prompt’a eklenir)</label>
 <textarea id="fixed" class="sm" placeholder="Örn. Karakterin yüzünü ve kıyafetini tüm sahnelerde aynı tut. Ekranda yazı olmasın."></textarea>
+<div class="row" style="margin-top:8px;align-items:center"><button class="btn" id="dclr" type="button">🧹 Taslağı temizle</button><span class="msg" id="dmsg" style="margin-top:0">Otomatik kayıt açık</span></div>
 <button class="go" id="go">Prompt üret</button>
 <button class="go" id="stop" style="display:none;margin-top:10px;background:#b3382c;color:#fff">⏹ Durdur (Esc)</button>
 <div class="msg" id="msg"></div>
@@ -122,6 +144,8 @@ textarea.sm{min-height:60px}
 <button class="go" id="sv">Kaydet</button>
 <div class="msg" id="sm"></div>
 <div class="msg" id="help"></div>
+<div class="lb" style="margin-top:24px">Tema</div><div class="row" id="themes"></div>
+<div class="lb">Görünüm</div><div class="row" id="appear"></div>
 <div class="lb" style="margin-top:24px">Kendi stillerim</div>
 <input type="text" id="csn" placeholder="Stil adı">
 <textarea id="cst" class="sm" placeholder="İngilizce stil tarifi: ışık, renk, doku, ruh hali" style="margin-top:8px"></textarea>
@@ -149,18 +173,51 @@ var PROV=[
 var CK="pu_cfg_v1",HK="vp_hist_v1";
 function jget(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}}
 function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-var cfg=jget(CK,{p:0,keys:{},models:{}});cfg.keys=cfg.keys||{};cfg.models=cfg.models||{};if(!(cfg.p>=0&&cfg.p<PROV.length))cfg.p=0;
+var cfg=jget(CK,{p:0,keys:{},models:{}});cfg.keys=cfg.keys||{};cfg.models=cfg.models||{};if(!(cfg.p>=0&&cfg.p<PROV.length))cfg.p=0;cfg.theme=cfg.theme||"Gece";cfg.appear=cfg.appear||"koyu";
 var hist=jget(HK,[]);if(!Array.isArray(hist))hist=[];
 if(!jget("vp_imported_pu",0)){
   var oldH=jget("pu_hist_v1",[]);
   if(Array.isArray(oldH)&&oldH.length){oldH.forEach(function(o){if(o.mo==null)o.mo=3;hist.push(o)});hist.sort(function(a,b){return parseInt(b.id)-parseInt(a.id)});jset(HK,hist.slice(0,100))}
   jset("vp_imported_pu",1);
 }
+var THEMES={
+ "Gece":{l:["#eef2f9","#fff","#131a2a","#5c6a85","#2f6fed","#d8e0ef","#fff","#b8641a","#2f8f5b","#d64545","#d63384"],d:["#070b14","#0e1522","#e9eefb","#8d99b3","#4f8cff","#1d2839","#06101f","#f5a524","#34d399","#f87171","#ff4fa3"]},
+ "Gül":{l:["#faf6f3","#fff","#241a1f","#7a6a72","#e0457b","#eadfe3","#fff","#b8641a","#2f8f5b","#d64545","#8b5cf6"],d:["#17120f","#231c20","#f5ecef","#a8979f","#ff6a9c","#3a2f35","#1a0f14","#f0a85c","#6fd49b","#ff6369","#a78bfa"]},
+ "Neon":{l:["#f2f5f9","#fff","#101820","#5c6b7a","#0891b2","#dbe3ea","#fff","#b8641a","#2f8f5b","#d64545","#ff4fa3"],d:["#0b0e14","#12161f","#e6f1ff","#7d8aa0","#22d3ee","#1f2733","#06121a","#f0a85c","#4cc38a","#ff6369","#ff4fa3"]},
+ "Altın":{l:["#faf3e8","#fff","#2a1f14","#7a6a55","#d97706","#eadfc8","#fff","#b8641a","#2f8f5b","#d64545","#e0457b"],d:["#171208","#221a10","#f5ecd8","#a8977f","#f0a85c","#3a2f1f","#1a1206","#f5a524","#6fd49b","#ff6369","#ff8a3d"]},
+ "Orman":{l:["#f2f7f3","#fff","#14201a","#5c7268","#2f8f5b","#dce8df","#fff","#b8641a","#2f8f5b","#d64545","#0891b2"],d:["#0f1712","#16211a","#e8f2ec","#8aa093","#4cc38a","#24352b","#07120c","#f0a85c","#6fd49b","#ff6369","#22d3ee"]},
+ "Mor":{l:["#f5f3fa","#fff","#1d1626","#6f6480","#7c3aed","#e4def0","#fff","#b8641a","#2f8f5b","#d64545","#e0457b"],d:["#120f17","#1c1723","#efe8f5","#9a8fa8","#a78bfa","#2f2635","#120a1c","#f0a85c","#6fd49b","#ff6369","#ff4fa3"]}
+};
+function applyTheme(){
+  var name=cfg.theme||"Gece",t=THEMES[name]||THEMES["Gece"];
+  var pref=cfg.appear||"koyu";
+  var dark=pref==="koyu"||(pref==="oto"&&window.matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches);
+  var v=dark?t.d:t.l,r=document.documentElement.style,keys=["bg","card","tx","mu","ac","bd","ac2","wn","ok","dgr","ac3"];
+  keys.forEach(function(k,i){r.setProperty("--"+k,v[i])});
+  r.setProperty("color-scheme",dark?"dark":"light");
+  document.documentElement.setAttribute("data-theme",name);
+  document.documentElement.setAttribute("data-appearance",dark?"dark":"light");
+  var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute("content",v[0]);
+}
+applyTheme();
+try{matchMedia("(prefers-color-scheme:dark)").addEventListener("change",function(){if((cfg.appear||"koyu")==="oto")applyTheme()})}catch(e){}
 
 var MODES=["Video: Base","Video: Referans","Kuyruk","Görsel"];
 var KINDS=[["T2VA","T2VA · metinden"],["I2VA","I2VA · ilk kare"],["FL2VA","FL2VA · ilk + son kare"],["L2VA","L2VA · son kare"]];
 var DURS=[4,5,6,8,10,15],SHOTS=["Oto",1,2,3,4],COUNTS=[1,2,3];
-var CAMS=[["Oto",""],["Sabit · gerilim","Static Shot"],["Pan · yandan açılım","Pan"],["Whip Pan · ani geçiş","Pan at large amplitude and fast speed (whip pan)"],["Tilt · dikey açılım","Tilt"],["Roll · dengesizlik","Roll with small amplitude at slow speed"],["Push In · yakınlık","Push In"],["Pull Out · yalnızlık","Pull Out"],["Optik zoom · gözlem","Zoom In (optical zoom, the camera position stays fixed)"],["Crash zoom · vurgu","Zoom In at fast speed (crash zoom)"],["Dolly zoom · baş dönmesi","Pull Out combined with Zoom In so the subject keeps the same size while the background stretches (dolly zoom)"],["Takip · sürükleme","Tracking Shot following the subject"],["Truck · paralaks","Truck"],["Arc / Orbit · kahramanlık","Arc Shot"],["Boom / Crane · ihtişam","Pedestal up (crane rise)"],["El kamerası · gerçekçilik","Shake Slightly (handheld feel)"],["POV","POV"]];
+var CAMS=[["Oto",""],["Sabit · gerilim","Static Shot"],["Pan · yandan açılım","Pan"],["Whip Pan · ani geçiş","Pan at large amplitude and fast speed (whip pan)"],["Tilt · dikey açılım","Tilt"],["Roll · dengesizlik","Roll with small amplitude at slow speed"],["Push In · yakınlık","Push In"],["Pull Out · yalnızlık","Pull Out"],["Optik zoom · gözlem","Zoom In (optical zoom, the camera position stays fixed)"],["Crash zoom · vurgu","Zoom In at fast speed (crash zoom)"],["Dolly zoom · baş dönmesi","Pull Out combined with Zoom In so the subject keeps the same size while the background stretches (dolly zoom)"],["Takip · sürükleme","Tracking Shot following the subject"],["Truck · paralaks","Truck"],["Arc / Orbit · kahramanlık","Arc Shot"],["Boom / Crane · ihtişam","Pedestal up (crane rise)"],["El kamerası · gerçekçilik","Shake Slightly (handheld feel)"],["POV","POV"],
+["Tilt reveal · aşağıdan yukarı","Tilt Up with large amplitude at slow speed, revealing the subject from feet to face"],
+["Pedestal down · alçalma","Pedestal Down with small amplitude at slow speed"],
+["Nefes · mikro itme","Push In with small amplitude at slow speed, almost imperceptible"],
+["Açılım · bağlamı göster","Pull Out with large amplitude at slow speed, revealing the surrounding space"],
+["Paralaks · merkez sabit","Truck Left combined with Pan Right so the subject stays centered while the background slides"],
+["Sarkaç · huzursuzluk","Roll Clockwise then Roll Counterclockwise with small amplitude at slow speed"],
+["POV yürüyüş","POV with Shake Slightly at slow speed, as if walking"],
+["Takip · hızlanan","Tracking Shot following the subject, starting at slow speed and accelerating to fast speed"],
+["Pan keşif","Pan Right with large amplitude at slow speed, scanning the space"],
+["İtme + duruş (FL2VA)","Push In with small amplitude at slow speed, easing into a Static Shot for the final frame"],
+["El kamerası · gergin","Shake Slightly with small amplitude, irregular handheld tension"],
+["Whip pan + itme","Pan at large amplitude and fast speed (whip pan), landing into a slow Push In"]];
 var DLG=[["Yok",""],["English","English"],["Türkçe","Turkish"]];
 var MUS=["Müzik var","Müziksiz (N/A)"];
 var RULES={
@@ -199,17 +256,30 @@ var TT=["reference generation","keyframe completion","video editing","video cont
 var QUICK=["Kamera hareketini zenginleştir","Daha kısa yaz","Daha detaylı yaz","Müziği kaldır (N/A yap)","Ses ortamını güçlendir"];
 var QD=["Oto",3,4,5,6,8,10],QAR=["9:16","2:3","3:4","16:9","1:1"];
 var st={mo:0,k:0,d:3,sh:0,sy:0,cm:0,dl:1,mu:0,c:0,qd:0,qt:0,qf:1,qr:0,qa:0},tsel={};
+var DK="vp_draft_v1",draft=jget(DK,null),draftT=null;
+if(draft&&typeof draft==="object"){
+  if(draft.st&&typeof draft.st==="object")Object.keys(draft.st).forEach(function(k){if(k!=="th"&&k!=="ap")st[k]=draft.st[k]});
+  if(draft.tsel&&typeof draft.tsel==="object")tsel=draft.tsel;
+  if(draft.fields&&typeof draft.fields==="object")["idea","sp","f1","f2","rf","fixed","qs","cn","cd"].forEach(function(id){var el=$(id);if(el&&draft.fields[id]!=null)el.value=draft.fields[id]});
+}
+function draftData(){var f={};["idea","sp","f1","f2","rf","fixed","qs","cn","cd"].forEach(function(id){var el=$(id);if(el)f[id]=el.value});return{st:st,tsel:tsel,csel:(typeof csel!=="undefined"&&csel)||{},fields:f}}
+function writeDraft(){jset(DK,draftData());var el=$("dmsg");if(el){el.textContent="Taslak kaydedildi ✓";clearTimeout(writeDraft._t);writeDraft._t=setTimeout(function(){el.textContent="Otomatik kayıt açık"},1400)}}
+function saveDraft(){clearTimeout(draftT);draftT=setTimeout(writeDraft,350)}
+["idea","sp","f1","f2","rf","fixed","qs","cn","cd"].forEach(function(id){var el=$(id);if(el)el.addEventListener("input",saveDraft)});
+window.addEventListener("beforeunload",function(){clearTimeout(draftT);writeDraft()});
+$("dclr").onclick=function(){["idea","sp","f1","f2","rf","fixed","cn","cd"].forEach(function(id){$(id).value=""});$("qs").value="Vertical 9:16.";tsel={};csel={};[].forEach.call($("tt").children,function(b){b.className="chip q"});if(typeof renderChars==="function")renderChars();writeDraft();$("dmsg").textContent="Taslak temizlendi."};
 
 function chips(id,items,key,label,after){
   var el=$(id);el.textContent="";
   items.forEach(function(it,i){
     var b=mk("button","chip"+(st[key]===i?" on":""),label(it));
-    b.onclick=function(){st[key]=i;[].forEach.call(el.children,function(c,j){c.className="chip"+(j===i?" on":"")});if(after)after(i)};
+    b.onclick=function(){st[key]=i;[].forEach.call(el.children,function(c,j){c.className="chip"+(j===i?" on":"")});if(after)after(i);saveDraft()};
     el.appendChild(b);
   });
 }
 function upd(){
   var r=st.mo===1,q=st.mo===2,im=st.mo===3,k=KINDS[st.k][0];
+  document.documentElement.style.setProperty("--mode",["#4f8cff","#a78bfa","#34d399","#f5a524"][st.mo]||"#4f8cff");
   sh("kl",!r&&!q);sh("kinds",!r&&!q);sh("fr",!r&&!q&&k!=="T2VA");sh("rfw",r);
   $("f1l").textContent=k==="L2VA"?"Son kare (Picture 1) açıklaması":k==="FL2VA"?"İlk kare (Picture 1) açıklaması":"İlk kare (Picture 1) açıklaması";
   var b2=!r&&!q&&k==="FL2VA";sh("f2",b2);sh("f2l",b2);sh("im2",b2);
@@ -248,7 +318,7 @@ chips("counts",COUNTS,"c",function(x){return x+" adet"});
   var el=$("tt");
   TT.forEach(function(t){
     var b=mk("button","chip q",t);
-    b.onclick=function(){tsel[t]=!tsel[t];b.className="chip q"+(tsel[t]?" on":"")};
+    b.onclick=function(){tsel[t]=!tsel[t];b.className="chip q"+(tsel[t]?" on":"");saveDraft()};
     el.appendChild(b);
   });
 })();
@@ -257,6 +327,7 @@ upd();
 var COMMON="Shared rules (write everything in English):\n"+
 "- [Shot 1] has NO timestamp and opens with the overall style and initial composition (e.g. 'Live-action, cinematic, a medium-wide shot frames...'). Later shots: '[Shot 2] At 00:03.500, the camera cuts to...' with strictly increasing times inside the video duration. Cut verbs: the camera cuts to / the shot cuts to / the shot transitions to / the shot changes to / the shot switches to. Cut only when it adds new information about subject, space, state, viewpoint or time; otherwise use camera motion.\n"+
 "- Camera motion = type + amplitude + speed, written as a natural sentence, e.g. 'The camera pushes in with small amplitude at slow speed toward the letter.' Types: Zoom In/Out, Push In/Pull Out, Pan Left/Right, Truck Left/Right, Tilt Up/Down, Pedestal Up/Down, Arc Shot, Tracking Shot, Static Shot, Shake Slightly/Strongly, POV, Roll Clockwise/Counterclockwise. Mention 'with small/large amplitude' and 'at slow/fast speed' only when meaningful (omit medium and normal).\n"+
+"- Motivate every camera move by the subject's action, emotion or a reveal; avoid unmotivated drift. At most one or two distinct moves per shot; keep the horizon level unless Roll is requested.\n"+
 "- Speakers get stable IDs (S1),(S2); a group is (S1,S2). At first appearance give identity and voice (age, gender, pitch, timbre, pace, accent). Outside <d>: ID, action, delivery. Inside <d>: only [Language] plus the spoken words verbatim and untranslated, e.g. The young woman with a quiet, breathy voice (S1) says: <d>[English] I get off at the next station.</d> Voiceover: use the exact phrase 'says in an off-screen voiceover' and right after </d> write 'while his/her lips remain completely closed'. Speech across a cut: put <scenetrans> at the connecting points of both parts and state the audio continues seamlessly across the cut. Speech cut by the video end: <cutoff>.\n"+
 "- Visible on-screen text goes in double quotes, verbatim.\n"+
 "- overall_soundscape: 1-4 sentences, one paragraph: ambience, physical action sounds, non-verbal human sounds. No dialogue, singing or diegetic music there. N/A only for total silence.\n"+
@@ -271,7 +342,7 @@ L2VA:"Mode L2VA: <Picture 1> is the final frame and belongs to the last shot, no
 var SYSR="You write prompts for the MiniMax H3 video model in the full-reference format. Output exactly six sections in this order, each starting with its name and a colon, separated by blank lines: subject_definitions, summary, retention_analysis, detailed_description, overall_soundscape, non_diegetic_music. Everything in English except dialogue/lyrics inside <d> and text visible in the scene.\n"+
 "Labels: <Subject N> = reusable visible content (person, animal, object, scene, clothing, prop, style, action, pose); one line each: what it denotes, reference role, main features, source assets. <Picture N> only when an image is a concrete frame anchor (first/last/key frame, storyboard); an image that only defines a character, scene or style is cited inside the Subject line instead. <Video N> only for whole-video relations (edit source, continuation, cut/pacing structure); reused people or objects from a video still become Subjects. <Audio N> = copied or referenced audio; when bound to a target speaker write e.g. '<Audio 1> is the voice-timbre reference for <Subject 1> (S1)'. Video and Audio are numbered independently. A label keeps one meaning in every section.\n"+
 "summary: one short paragraph starting with [task types joined by ' + '] chosen from: keyframe completion, reference generation, video editing, video continuation, audio reuse, audio reference (no repeats; a video giving only camera/cut/rhythm is reference generation). No new labels. For editing start with 'The target video is an edited version of <Video 1>.'\n"+
-"retention_analysis: one line per label. Subject: '<Subject 1> (appears in [Shot 1], [Shot 3]): fully_preserved - ...'. Picture: '<Picture 2> ([Shot 1] first frame): ...'. Video: '<Video 1> (cut and pacing structure): weak_reference - ...'. Visible markers: fully_preserved, partially_preserved, attribute_transfer, weak_reference. Audio markers: fully_copy, partially_copy, reference, weak_reference. New actions or backgrounds are not fidelity losses. Never write (Sx) here.\n"+
+"retention_analysis: one line per label. Subject: '<Subject 1> (appears in [Shot 1], [Shot 3]): fully_preserved - ...'. Picture: '<Picture 2> ([Shot 1] first frame): ...'. Video: '<Video 1> (cut and pacing structure): weak_reference - ...'. Visible markers: fully_preserved, partially_preserved, attribute_transfer, weak_reference. Audio markers: fully_copy, partially_copy, reference, weak_reference. New actions or backgrounds are not fidelity losses. New actions or backgrounds are not fidelity losses. Never write (Sx) here.\n"+
 "detailed_description: 350-500 words (more if dialogue-dense). First 1-2 sentences state the style BEFORE [Shot 1]. Each shot: composition, subject appearance and position, environment and lighting, actions, camera movement, current sound, and where each reference takes effect. Insert labels at first appearance and reuse them; anchors read 'the shot begins from <Picture 1>'. A speaking subject: '<Subject 2> (S1) turns and says, <d>[English] ...</d>' (off-screen speakers keep the form and say off-screen). Verbal cues inside directly reused BGM use <Audio N> as source, no (Sx). If only timbre or delivery is referenced, do not carry the original dialogue. Use [unclear] for unintelligible reused speech; plain punctuation only.\n"+
 "Audio relations go only in the matching section: ambience in overall_soundscape, score in non_diegetic_music, e.g. '<Audio 2> is directly reused as the complete audience-only score.'";
 
@@ -367,7 +438,7 @@ function buildStyles(){
   chips("styles",im?STYIL:STY,im?"si":"sy",function(x){return x[0]},function(){refreshStyleRules()});
   refreshStyleRules();
 }
-st.si=0;st.m=0;st.a=0;st.r=0;st.hf=0;st.cf=0;
+if(st.si==null)st.si=0;if(st.m==null)st.m=0;if(st.a==null)st.a=0;if(st.r==null)st.r=0;if(st.hf==null)st.hf=0;if(st.cf==null)st.cf=0;
 styleLists();
 upd();
 var refImg=null;
@@ -627,6 +698,10 @@ function showProv(){
 chips("provs",PROV,"p_dummy",function(x){return x.n},function(i){cfg.p=i;showProv()});
 (function(){[].forEach.call($("provs").children,function(c,j){c.className="chip"+(j===cfg.p?" on":"")})})();
 showProv();
+st.th=Math.max(0,Object.keys(THEMES).indexOf(cfg.theme||"Gece"));
+st.ap=["oto","acik","koyu"].indexOf(cfg.appear||"koyu");if(st.ap<0)st.ap=2;
+chips("themes",Object.keys(THEMES),"th",function(x){return x},function(i){cfg.theme=Object.keys(THEMES)[i];jset(CK,cfg);applyTheme()});
+chips("appear",["Otomatik","Açık","Koyu"],"ap",function(x){return x},function(i){cfg.appear=["oto","acik","koyu"][i];jset(CK,cfg);applyTheme()});
 $("sv").onclick=function(){
   var p=PROV[cfg.p];
   cfg.keys[p.k]=$("key").value.trim();
@@ -669,21 +744,23 @@ $("im3").onclick=function(){pick(function(t){$("idea").value=t},$("im3"))};
 })();
 var CHK="vp_chars_v1",chars=jget(CHK,[]),csel={};
 if(!Array.isArray(chars))chars=[];
+if(draft&&draft.csel&&typeof draft.csel==="object")csel=draft.csel;
+if(!chars.length&&!jget("vp_seed_v1",0)){chars.push({n:"Elif (örnek)",d:"28 yaşında, kızıl saçlı, mavi hırka, çilli; sakin, sıcak ve hafif nefesli bir ses tonu"});jset(CHK,chars);jset("vp_seed_v1",1)}
 function renderChars(){
   var el=$("chs");el.textContent="";
   if(!chars.length)el.appendChild(mk("div","msg","Henüz karakter yok. Aşağıdan kaydet."));
   chars.forEach(function(c,i){
     var b=mk("button","chip q"+(csel[i]?" on":""),c.n);
-    b.onclick=function(){csel[i]=!csel[i];b.className="chip q"+(csel[i]?" on":"")};
+    b.onclick=function(){csel[i]=!csel[i];b.className="chip q"+(csel[i]?" on":"");saveDraft()};
     el.appendChild(b);
   });
 }
 $("csv").onclick=function(){
   var n=$("cn").value.trim(),d=$("cd").value.trim();if(!n||!d)return;
   chars=chars.filter(function(c){return c.n!==n});chars.push({n:n,d:d});jset(CHK,chars);
-  csel={};$("cn").value="";$("cd").value="";renderChars();
+  csel={};$("cn").value="";$("cd").value="";renderChars();saveDraft();
 };
-$("cdl").onclick=function(){chars=chars.filter(function(c,i){return !csel[i]});jset(CHK,chars);csel={};renderChars()};
+$("cdl").onclick=function(){chars=chars.filter(function(c,i){return !csel[i]});jset(CHK,chars);csel={};renderChars();saveDraft()};
 renderChars();
 
 function split(text){return text.split(/^\s*={3,}\s*$/m).map(function(s){return s.trim()}).filter(Boolean)}
