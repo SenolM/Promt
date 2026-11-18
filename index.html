@@ -28,6 +28,8 @@ textarea.sm{min-height:60px}
 .chip.q{font-size:13px;padding:7px 11px}
 .chip.exp{border-style:dashed;border-color:var(--wn)}
 .chip.exp.on{background:var(--wn);color:#1a1206;border-color:var(--wn)}
+.chip.k{border-color:var(--ac3);color:var(--ac3)}
+.chip.k.on{background:var(--ac3);color:#fff;border-color:var(--ac3)}
 .camg{width:100%;font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin:8px 0 2px}
 .go{width:100%;margin-top:18px;padding:15px;border:0;border-radius:14px;background:var(--ac);color:var(--ac2);font-size:17px;font-weight:600}
 .go:disabled{opacity:.5}
@@ -44,7 +46,10 @@ textarea.sm{min-height:60px}
 .edit .row{margin-bottom:8px}
 .msg{color:var(--mu);margin-top:14px;font-size:14px;word-wrap:break-word}
 .hid{position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}
-#styles{max-height:168px;overflow-y:auto;padding:2px}
+#styles{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;max-height:280px;overflow-y:auto;padding:2px}
+#styles .chip{display:flex;align-items:center;justify-content:center;text-align:center;width:100%;min-height:46px;padding:8px 6px;font-size:12.5px;line-height:1.25;border-radius:12px;white-space:normal;word-break:break-word}
+#cams{max-height:320px;overflow-y:auto;padding:2px}
+#camq{margin-top:4px}
 .thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 .thumb{position:relative;width:96px;height:96px;border-radius:12px;overflow:hidden;border:1px solid var(--bd);background:var(--card)}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -69,6 +74,12 @@ h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:
 .msg.ok{color:var(--ok)}.msg.err{color:var(--dgr)}
 @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (hover:none),(max-width:768px){
+body{background-attachment:scroll}
+body::after{display:none}
+.tabs{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--bg)}
+#styles{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));max-height:240px}
+}
 </style>
 </head>
 <body>
@@ -119,7 +130,9 @@ h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:
 <div class="lb">En-boy oranı</div><div class="row" id="ars"></div>
 </div>
 <div class="lb">Stil</div><div class="row" id="styles"></div>
-<div class="lb" id="caml">Kamera eğilimi</div><div class="row" id="cams"></div>
+<div class="lb" id="caml">Kamera eğilimi</div>
+    <input type="text" id="camq" placeholder="Kamera hareketi ara (örn. arc, dolly, drone)">
+    <div class="row" id="cams"></div>
 <div class="msg" id="camnote" style="margin-top:6px"></div>
 <div class="lb" id="dlgl">Diyalog</div><div class="row" id="dlg"></div>
 <div class="lb" id="musl">Müzik</div><div class="row" id="mus"></div>
@@ -172,6 +185,10 @@ h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:
 function $(id){return document.getElementById(id)}
 function mk(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
 function sh(id,on){$(id).style.display=on?"":"none"}
+function clampIdx(key,len){var v=st[key];if(typeof v!=="number"||!(v>=0&&v<len)||v%1!==0)st[key]=0}
+/* Sekmeler en başta bağlanır: ileride bir init hatası olsa bile navigasyon çalışır */
+function tab(n){["v1","v2","v3"].forEach(function(v,i){$(v).className=(i+1===n)?"":"hid";$("t"+(i+1)).className="tab"+(i+1===n?" on":"")});if(n===2&&typeof renderHist==="function")renderHist()}
+$("t1").onclick=function(){tab(1)};$("t2").onclick=function(){tab(2)};$("t3").onclick=function(){tab(3)};
 
 var PROV=[
  {n:"Gemini (ücretsiz)",k:"gemini",m:"gemini-flash-latest",h:"Ücretsiz anahtar: aistudio.google.com/apikey adresine Google hesabınla gir, “Create API key”e dokun."},
@@ -215,40 +232,45 @@ try{matchMedia("(prefers-color-scheme:dark)").addEventListener("change",function
 var MODES=["Video: Base","Video: Referans","Kuyruk","Görsel"];
 var KINDS=[["T2VA","T2VA · metinden"],["I2VA","I2VA · ilk kare"],["FL2VA","FL2VA · ilk + son kare"],["L2VA","L2VA · son kare"]];
 var DURS=[4,5,6,8,10,15],SHOTS=["Oto",1,2,3,4],COUNTS=[1,2,3];
-var GLAB={c:"Resmî H3 tipleri",v:"Güvenli varyantlar (tip + genlik/hız)",e:"⚠ Deneysel kombinasyonlar"};
+var GLAB={c:"Resmî H3 tipleri",k:"🎥 Türev hareketler (resmî tip bileşimi)",v:"Güvenli varyantlar (tip + genlik/hız)",e:"⚠ Deneysel kombinasyonlar"};
 var CAMS=[
-["Oto","","c"],
-["Sabit · kilitli","Static Shot","c"],
-["Pan · yatay","Pan","c"],
-["Tilt · dikey","Tilt","c"],
-["Truck · yanal","Truck","c"],
-["Pedestal · yüksel","Pedestal Up","c"],
-["Pedestal · alçal","Pedestal Down","c"],
-["Push in · yaklaş","Push In","c"],
-["Pull out · uzaklaş","Pull Out","c"],
-["Zoom in · optik","Zoom In (optical zoom, the camera position stays fixed)","c"],
-["Zoom out · optik","Zoom Out (optical zoom, the camera position stays fixed)","c"],
-["Arc · yörünge","Arc Shot","c"],
-["Tracking · takip","Tracking Shot following the subject","c"],
-["Shake · hafif","Shake Slightly","c"],
-["Shake · güçlü","Shake Strongly","c"],
-["POV","POV","c"],
-["Roll · saat yönü","Roll Clockwise","c"],
-["Roll · ters yön","Roll Counterclockwise","c"],
-["Pan keşif","Pan Right with large amplitude at slow speed, scanning the space","v"],
-["Whip pan","Pan at large amplitude and fast speed (whip pan)","v"],
-["Tilt reveal","Tilt Up with large amplitude at slow speed, revealing the subject from feet to face","v"],
-["Push in · nefes","Push In with small amplitude at slow speed, almost imperceptible","v"],
-["Push in + lock","Push In with small amplitude at slow speed, easing into a Static Shot for the final frame","v"],
-["Pull out · açılım","Pull Out with large amplitude at slow speed, revealing the surrounding space","v"],
-["Crash zoom","Zoom In at fast speed (crash zoom)","v"],
-["Handheld · gergin","Shake Slightly with small amplitude, irregular handheld tension","v"],
-["POV · yürüyüş","POV with Shake Slightly at slow speed, as if walking","v"],
-["Roll · sarkaç","Roll Clockwise then Roll Counterclockwise with small amplitude at slow speed","v"],
-["Tracking · hızlanan","Tracking Shot following the subject, starting at slow speed and accelerating to fast speed","v"],
-["⚠ Dolly zoom","Pull Out combined with Zoom In so the subject keeps the same size while the background stretches (dolly zoom)","e"],
-["⚠ Paralaks","Truck Left combined with Pan Right so the subject stays centered while the background slides","e"],
-["⚠ Whip pan + itme","Pan at large amplitude and fast speed (whip pan), landing into a slow Push In","e"]
+["Oto","","c","auto",[]],
+["Sabit · kilitli","Static Shot","c","static",["static shot","static","locked","no camera","still camera","tripod","camera does not move"]],
+["Pan · yatay","Pan","c","pan",["pan","pans","panning"]],
+["Tilt · dikey","Tilt","c","tilt",["tilt","tilts","tilting"]],
+["Truck · yanal","Truck","c","truck",["truck","slide","sideways","laterally"]],
+["Pedestal · yüksel","Pedestal Up","c","pedup",["pedestal","rise","rises","lift","ascend","boom up","crane up"]],
+["Pedestal · alçal","Pedestal Down","c","peddn",["pedestal","lower","lowers","descend","boom down","crane down"]],
+["Push in · yaklaş","Push In","c","pushin",["push in","pushes in","pushing in","dolly in","moves in","move closer","moves closer","closer to","closing in","advances toward"]],
+["Pull out · uzaklaş","Pull Out","c","pullout",["pull out","pulls out","pulling out","dolly out","moves back","move back","back away","away from","retreats","widens"]],
+["Zoom in · optik","Zoom In (optical zoom, the camera position stays fixed)","c","zoomin",["zoom"]],
+["Zoom out · optik","Zoom Out (optical zoom, the camera position stays fixed)","c","zoomout",["zoom"]],
+["Arc · yörünge","Arc Shot","c","arc",["arc","orbit","circles","circle around","sweeps around","curves around"]],
+["Tracking · takip","Tracking Shot following the subject","c","track",["tracking","tracks","follows","following","alongside","moves with the subject"]],
+["Shake · hafif","Shake Slightly","c","shakes",["shake","shakes","shaking","handheld","wobble","tremble"]],
+["Shake · güçlü","Shake Strongly","c","shakel",["shake","shakes","shaking","handheld","violent","impact"]],
+["POV","POV","c","pov",["pov","point of view","first-person","first person","subjective","own eyes"]],
+["Roll · saat yönü","Roll Clockwise","c","rollcw",["roll","rolls","rolling"]],
+["Roll · ters yön","Roll Counterclockwise","c","rollccw",["roll","rolls","rolling"]],
+["Drone · havadan","Drone shot: the camera glides through the air with large amplitude at slow speed, flying forward and rising above the subject from a high aerial vantage point (Push In combined with Pedestal Up, seen as a flying drone).","k","drone",["drone","aerial","from above","overhead","flies","flying","glides","from the air"]],
+["Aerial orbit · yukarıdan","Aerial orbit: the camera arcs around the subject with large amplitude at slow speed from a high aerial vantage point, looking down at a steep angle while the horizon stays level (Arc Shot combined with Pedestal Up).","k","aorbit",["aerial","orbit","arc","from above","overhead","circles"]],
+["Crane · vinç yükselişi","Crane shot: the camera rises on a crane with large amplitude at slow speed while tilting up, ending on the subject's face as the surroundings open up below (Pedestal Up combined with Tilt Up).","k","crane",["crane","rise","rises","ascend","lift","tilt up","boom"]],
+["Low angle arc · alçak yörünge","Low-angle Arc Shot: the camera arcs around the subject with large amplitude at slow speed from a low vantage point near the floor, looking up at the subject (Arc Shot combined with Tilt Up from a low angle).","k","lowarc",["arc","orbit","low angle","low vantage","looking up","from below","worm's eye"]],
+["Selfie · özne tutar","Selfie shot: the subject holds the camera at arm's length in a wide-angle front view; the camera moves with small amplitude at slow speed and shakes slightly with natural handheld motion (POV combined with Shake Slightly).","k","selfie",["selfie","arm's length","holds the camera","handheld","phone"]],
+["Pan keşif","Pan Right with large amplitude at slow speed, scanning the space","v","panexplore",["pan","pans","scanning"]],
+["Whip pan","Pan at large amplitude and fast speed (whip pan)","v","whippan",["pan","whip"]],
+["Tilt reveal","Tilt Up with large amplitude at slow speed, revealing the subject from feet to face","v","tiltrev",["tilt"]],
+["Push in · nefes","Push In with small amplitude at slow speed, almost imperceptible","v","pushbreath",["push in","pushes in","dolly in"]],
+["Push in + lock","Push In with small amplitude at slow speed, easing into a Static Shot for the final frame","v","pushlock",["push in","pushes in","dolly in","static shot"]],
+["Pull out · açılım","Pull Out with large amplitude at slow speed, revealing the surrounding space","v","pullreveal",["pull out","pulls out","dolly out"]],
+["Crash zoom","Zoom In at fast speed (crash zoom)","v","crashzoom",["zoom"]],
+["Handheld · gergin","Shake Slightly with small amplitude, irregular handheld tension","v","handheld",["shake","handheld"]],
+["POV · yürüyüş","POV with Shake Slightly at slow speed, as if walking","v","povwalk",["pov","point of view","first-person","first person"]],
+["Roll · sarkaç","Roll Clockwise then Roll Counterclockwise with small amplitude at slow speed","v","rollswing",["roll"]],
+["Tracking · hızlanan","Tracking Shot following the subject, starting at slow speed and accelerating to fast speed","v","trackfast",["tracking","tracks","follows","following"]],
+["⚠ Dolly zoom","Pull Out combined with Zoom In so the subject keeps the same size while the background stretches (dolly zoom)","e","dollywood",["zoom","pull out","push in"]],
+["⚠ Paralaks","Truck Left combined with Pan Right so the subject stays centered while the background slides","e","parallax",["truck","pan","slides"]],
+["⚠ Whip pan + itme","Pan at large amplitude and fast speed (whip pan), landing into a slow Push In","e","whippush",["pan","whip","push in"]]
 ];
 var DLG=[["Yok",""],["English","English"],["Türkçe","Turkish"]];
 var MUS=["Müzik var","Müziksiz (N/A)"];
@@ -287,13 +309,22 @@ var STY=[["Yok","","R"],
 var TT=["reference generation","keyframe completion","video editing","video continuation","audio reuse","audio reference"];
 var QUICK=["Kamera hareketini zenginleştir","Daha kısa yaz","Daha detaylı yaz","Müziği kaldır (N/A yap)","Ses ortamını güçlendir"];
 var QD=["Oto",3,4,5,6,8,10],QAR=["9:16","2:3","3:4","16:9","1:1"];
-var st={mo:0,k:0,d:3,sh:0,sy:0,cm:0,dl:1,mu:0,c:0,qd:0,qt:0,qf:1,qr:0,qa:0},tsel={};
+var st={mo:0,k:0,d:3,sh:0,sy:0,cm:0,cmk:"auto",dl:1,mu:0,c:0,qd:0,qt:0,qf:1,qr:0,qa:0},tsel={};
 var DK="vp_draft_v1",draft=jget(DK,null),draftT=null;
 if(draft&&typeof draft==="object"){
   if(draft.st&&typeof draft.st==="object")Object.keys(draft.st).forEach(function(k){if(k!=="th"&&k!=="ap")st[k]=draft.st[k]});
   if(draft.tsel&&typeof draft.tsel==="object")tsel=draft.tsel;
   if(draft.fields&&typeof draft.fields==="object")["idea","sp","f1","f2","rf","fixed","qs","cn","cd"].forEach(function(id){var el=$(id);if(el&&draft.fields[id]!=null)el.value=draft.fields[id]});
 }
+function camIndexOf(k){for(var i=0;i<CAMS.length;i++)if(CAMS[i][3]===k)return i;return -1}
+if(draft&&draft.st){
+  if(draft.st.cmk){var ci=camIndexOf(draft.st.cmk);if(ci>=0)st.cm=ci}
+  else if(typeof draft.st.cm==="number"&&draft.st.cm>=18)st.cm=Math.min(draft.st.cm+5,CAMS.length-1);
+}
+if(!(st.cm>=0&&st.cm<CAMS.length))st.cm=0;
+/* Erken indeks doğrulama: bozuk taslak açılışı çökertmesin */
+clampIdx("mo",MODES.length);clampIdx("k",KINDS.length);clampIdx("d",DURS.length);clampIdx("sh",SHOTS.length);clampIdx("cm",CAMS.length);clampIdx("sy",STY.length);clampIdx("dl",DLG.length);clampIdx("mu",MUS.length);clampIdx("c",COUNTS.length);clampIdx("qd",QD.length);clampIdx("qt",2);clampIdx("qf",2);clampIdx("qr",2);clampIdx("qa",QAR.length);
+st.cmk=CAMS[st.cm][3];
 function draftData(){var f={};["idea","sp","f1","f2","rf","fixed","qs","cn","cd"].forEach(function(id){var el=$(id);if(el)f[id]=el.value});return{st:st,tsel:tsel,csel:(typeof csel!=="undefined"&&csel)||{},fields:f}}
 function writeDraft(){jset(DK,draftData());var el=$("dmsg");if(el){el.textContent="Taslak kaydedildi ✓";clearTimeout(writeDraft._t);writeDraft._t=setTimeout(function(){el.textContent="Otomatik kayıt açık"},1400)}}
 function saveDraft(){clearTimeout(draftT);draftT=setTimeout(writeDraft,350)}
@@ -309,9 +340,10 @@ function chips(id,items,key,label,after){
     el.appendChild(b);
   });
 }
+function camHint(c){var g=c&&c[2];if(g==="e")return " (experimental combination; if ambiguous, prioritize one clear primary move)";if(g==="k")return " (not an official H3 camera type; written as a combination of official types, so verify the result)";return ""}
 function camNote(){
-  var el=$("camnote");if(!el)return;
-  el.textContent=(CAMS[st.cm]&&CAMS[st.cm][2]==="e")?"⚠ Deneysel kombinasyon: H3 tek hareketi daha güvenilir uygular; çıktıyı kontrol et.":"";
+  var el=$("camnote");if(!el)return;var c=CAMS[st.cm];
+  el.textContent=!c?"":c[2]==="e"?"⚠ Deneysel kombinasyon: H3 tek hareketi daha güvenilir uygular; çıktıyı kontrol et.":c[2]==="k"?"🎥 Türev hareket: resmî H3 tipi değil, resmî tiplerin birleşimi olarak yazıldı; çıktıyı kontrol et.":"";
 }
 function buildCams(){
   var el=$("cams");el.textContent="";
@@ -319,12 +351,25 @@ function buildCams(){
   var last=null;
   CAMS.forEach(function(it,i){
     if(it[2]!==last){last=it[2];el.appendChild(mk("div","camg",GLAB[last]||""))}
-    var b=mk("button","chip"+(st.cm===i?" on":"")+(it[2]==="e"?" exp":""),it[0]);
-    b.onclick=function(){st.cm=i;[].forEach.call(el.querySelectorAll("button.chip"),function(c){c.classList.remove("on")});b.classList.add("on");saveDraft();camNote()};
+    var b=mk("button","chip"+(st.cm===i?" on":"")+(it[2]==="e"?" exp":(it[2]==="k"?" k":"")),it[0]);
+    b.setAttribute("data-k",(it[3]+" "+(it[1]||"")+" "+(it[4]||[]).join(" ")).toLowerCase());
+    b.onclick=function(){st.cm=i;st.cmk=it[3];[].forEach.call(el.querySelectorAll("button.chip"),function(c){c.classList.remove("on")});b.classList.add("on");saveDraft();camNote()};
     el.appendChild(b);
   });
-  camNote();
+  camNote();filterCams();
 }
+function filterCams(){
+  var el=$("cams");if(!el)return;
+  var q=(($("camq")&&$("camq").value)||"").toLowerCase().trim();
+  var kids=[].slice.call(el.children),i,k;
+  for(i=0;i<kids.length;i++){k=kids[i];if(k.tagName==="DIV"){k._v=false;continue}
+    var txt=((k.textContent||"")+" "+(k.getAttribute("data-k")||"")).toLowerCase();
+    var show=!q||txt.indexOf(q)>=0;k.style.display=show?"":"none";k._v=show}
+  for(i=0;i<kids.length;i++){k=kids[i];if(k.tagName!=="DIV")continue;
+    var j=i+1,any=false;while(j<kids.length&&kids[j].tagName!=="DIV"){if(kids[j]._v)any=true;j++}
+    k.style.display=any?"":"none"}
+}
+$("camq").addEventListener("input",filterCams);
 function upd(){
   var r=st.mo===1,q=st.mo===2,im=st.mo===3,k=KINDS[st.k][0];
   document.documentElement.style.setProperty("--mode",["#4f8cff","#a78bfa","#34d399","#f5a524"][st.mo]||"#4f8cff");
@@ -336,8 +381,8 @@ function upd(){
   $("idl").textContent=q?"Ortak tanım: özne, mekan, ruh hali (her klibe uygulanır)":"Fikir (tek cümle yeterli, Türkçe olabilir)";
   $("spl").textContent=q?"Klip planı (her satır bir klip; başa süre yazabilirsin: “6 sn: …”)":"Shot planı (isteğe bağlı, her satır bir shot)";
   sh("iw",im);
-  if(im){["kl","kinds","fr","rfw","dul","durs","shl","shots","spl","sp","caml","cams","camnote","dlgl","dlg","musl","mus","qw"].forEach(function(x){$(x).style.display="none"})}
-  else{["shl","shots","spl","sp","caml","cams","camnote","dlgl","dlg","musl","mus"].forEach(function(x){$(x).style.display=""})}
+  if(im){["kl","kinds","fr","rfw","dul","durs","shl","shots","spl","sp","caml","camq","cams","camnote","dlgl","dlg","musl","mus","qw"].forEach(function(x){$(x).style.display="none"})}
+  else{["shl","shots","spl","sp","caml","camq","cams","camnote","dlgl","dlg","musl","mus"].forEach(function(x){$(x).style.display=""})}
   buildStyles();
   $("sp").placeholder=q?"örn. 4 sn: yüksek açı, kadın koltukta kameraya bakar\n7 sn: yan plan, başını çevirir, gülümser\nsüre yazmazsan serbest kalır":"örn. geniş plan, kadın peronda bekler\nyakın plan, mektubu katlar, “Bir sonraki durakta iniyorum.”";
 }
@@ -433,10 +478,10 @@ var SYS="You write rich, detailed image-generation prompts in English (photoreal
 var REFMODES=[["Benzer yap","Use the reference as the main basis: keep its subject type, composition, palette and lighting, and apply the user’s idea as the changes."],
 ["Sadece stil","Take only the style, palette, lighting and mood from the reference; the subject and scene come from the user’s idea."],
 ["Sadece poz / kompozisyon","Take only the pose, framing and composition from the reference; everything else comes from the user’s idea and the chosen style."]];
-var IMODELS=[["Midjourney","Midjourney: end with parameters like --ar and --v 7. One flowing descriptive prompt, no markdown."],
-["Flux","Flux: one rich natural-language paragraph, no parameters, no tags, no --flags."],
+/* Hedef modeller: Midjourney ve Zimage Turbo kaldırıldı. Bayrak: 1=Krea 2, 2=Qwen Image 2.1 */
+var IMODELS=[["Flux","Flux: one rich natural-language paragraph, no parameters, no tags, no --flags."],
 ["Krea 2","Krea 2: one flowing natural-language paragraph following the Krea 2 order; no --flags; mention the aspect ratio in words.",1],
-["Zimage Turbo","Zimage Turbo: one flowing natural-language paragraph, no parameters, no --flags."],
+["Qwen Image 2.1","Qwen-Image-2.1: one observer-style English paragraph following the Qwen-Image-2.1 rules; the aspect ratio is set separately and must NOT appear in the text; no quality boosters.",2],
 ["Genel","Generic: structured sections separated by blank lines, plus the aspect ratio at the end."]];
 var IARS=["3:2","2:3","16:9","9:16","1:1"];
 var SYSK="You write prompts for the Krea 2 image model. Write one flowing English paragraph per prompt, no markdown, no labels, no line breaks inside a prompt.\n\n"+
@@ -450,6 +495,15 @@ var SYSK="You write prompts for the Krea 2 image model. Write one flowing Englis
 "- A straight rear view hides front elements; use a slight three-quarter angle when something in front must stay visible.\n"+
 "- Every explicit detail the user gives (clothing, pose, framing, aspect ratio, objects) is mandatory and must appear exactly as stated.\n"+
 "- Respect the age and subject type specified by the user or reference. Keep content appropriate to the requested scene.";
+var SYSQWEN="You write prompts for the Qwen-Image-2.1 image model. Write ONE long English paragraph per prompt that describes the finished image as an observer reporting what is in the frame: present tense, third person, declarative. No instructions ('create', 'make sure', 'the AI should'), no quality boosters ('masterpiece', '8K', 'highly detailed', 'award-winning'), no markdown, no JSON, no field names, no aspect ratio in the text.\n"+
+"STRUCTURE:\n"+
+"1 Opening sentence (~20 words): 'The image is a <vertical/wide/square/tall> <style> <medium noun> of <subject>, <background and its palette>.' The medium noun (photograph, poster, illustration, portrait, close-up, infographic, logo, scene, card...) is never omitted; name the style word once here (realistic, photorealistic, cinematic, watercolour, flat-vector, isometric, editorial, 3D-rendered, retro...).\n"+
+"2 State the background and the surface it sits on immediately after the opening.\n"+
+"3 Walk the frame in order. For a layout/poster/wide scene: top band, then left, centre, right, then bottom band. For a single subject filling the frame: pose and placement, then head/face, then body and each garment/surface, then held objects, then edges. Use 8-14 positional phrases reaching the corners, edges and centre; about a third of sentences open on the position ('On the right side of the frame, ...', 'In the upper-left corner, ...', 'Across the lower third, ...').\n"+
+"4 Every legible text string: put it in straight double quotes in its own script (Chinese stays Chinese, Turkish stays Turkish, Arabic stays Arabic...), in reading order, and state its position, weight, colour, case and relative size. Write the words in the case you want printed. Do not invent signage; if a mark is unreadable call it blurred or indistinct. If nothing is meant to be read, add no text.\n"+
+"5 Give lighting its own sentence: source, direction, quality, shadows and highlights ('The lighting is ...').\n"+
+"6 Close with exactly one sentence: 'The overall composition ...' covering balance, palette, style and mood. No second summary.\n"+
+"THROUGHOUT: about 20 sentences / 400-500 words even for a short brief. Hedge genuine ambiguity ('appears to be', 'likely', 'a notebook or a tablet'); be definite only about what the user fixed. Name colours with a modifier (deep navy, muted olive, pale cream, warm terracotta). Give materials, not just nouns (brushed metal, coarse linen, frosted glass, weathered wood). Enumerate; never 'several items'; write small counts as words. People: age as a life stage or decade (a child, a young adult, in her thirties), never a number of years; describe build, posture, gaze, expression, hair, skin tone and each garment with colour and material; if the face is turned away or cropped, say so. Objects by class, not brand, unless the user named a brand. Keep shadows, reflections and scale physically coherent. Every explicit detail the user gives (clothing, pose, framing, objects, quoted text) is mandatory and unchanged. Respect the age and subject type specified by the user or reference. Keep content appropriate to the requested scene.";
 var NEWSTY=[
 ["Neo-noir cyberpunk","neo-noir cyberpunk megacity: towering skyscrapers and giant holographic billboards, constant rain, dense fog, wet reflective streets, neon magenta and cyan glow cutting through dark haze, flying police vehicles crossing the skyline, hard chiaroscuro light, gritty cinematic sci-fi mood.","R"],
 ["Sci-fi megakent (Alita)","sci-fi megacity: vast layered city with floating districts, hover vehicles and flying cars weaving between megastructures, colossal cargo ships and spacecraft drifting in the sky, vibrant saturated colors, crisp high-detail lighting, grand scale, lived-in industrial futurism.","R"],
@@ -467,9 +521,9 @@ function styleLists(){
   });
 }
 function selectedStyle(){
-  var list=st.mo===3?STYIL:STY;
-  var idx=st.mo===3?st.si:st.sy;
-  return list[idx]||list[0];
+  var im=st.mo===3,list=(im?STYIL:STY)||[];
+  var idx=im?st.si:st.sy;
+  return list[idx]||list[0]||["Yok","","R"];
 }
 function styleSystemRules(style){
   var family=style&&style[2]||"R";
@@ -480,10 +534,10 @@ function refreshStyleRules(){
   if(el)el.value=styleSystemRules(selectedStyle());
 }
 function buildStyles(){
-  var im=st.mo===3;
+  var im=st.mo===3,list=(im?STYIL:STY)||[];
   if(!(st.sy>=0&&st.sy<STY.length))st.sy=0;
-  if(!(st.si>=0&&st.si<(STYIL||[]).length))st.si=0;
-  chips("styles",im?STYIL:STY,im?"si":"sy",function(x){return x[0]},function(){refreshStyleRules()});
+  if(!(st.si>=0&&st.si<list.length))st.si=0;
+  chips("styles",list,im?"si":"sy",function(x){return x[0]},function(){refreshStyleRules()});
   refreshStyleRules();
 }
 if(st.si==null)st.si=0;if(st.m==null)st.m=0;if(st.a==null)st.a=0;if(st.r==null)st.r=0;if(st.hf==null)st.hf=0;if(st.cf==null)st.cf=0;
@@ -503,6 +557,8 @@ chips("models",IMODELS,"m",function(x){return x[0]});
 chips("ars",IARS,"a",function(x){return x});
 chips("refmodes",REFMODES,"r",function(x){return x[0]});
 var CFAM=[["Gerçekçi","R"],["Anime / 2D","A"],["3D","D"],["Claymation","C"],["Suluboya","W"],["Yağlıboya","O"],["Comic / pop","P"],["Pixel","X"]];
+/* Geç indeks doğrulama (bu diziler ancak burada tanımlı) */
+clampIdx("m",IMODELS.length);clampIdx("a",IARS.length);clampIdx("r",REFMODES.length);clampIdx("hf",5);clampIdx("cf",CFAM.length);clampIdx("si",STYIL.length);
 chips("cstype",CFAM,"cf",function(x){return x[0]});
 function renderCS(){
   var l=$("cslist");l.textContent="";
@@ -549,20 +605,32 @@ function instr(){
   if(k==="FL2VA")return"How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot "+N+") aligns with the "+S+"-second mark of the target video.";
   return"How the reference pictures align with the target video — <Picture 1> (from [Shot "+N+"]) aligns with the "+S+"-second mark of the target video.";
 }
-function lint(t,mo,dur){
+function lint(t,mo,dur,camk){
   if(mo===3||mo==null)return[];
+  var camHit=!camk||!camk.length||camk.some(function(k){return t.toLowerCase().indexOf(k)>=0});
   if(mo===2){
     var qw=[];
-    if(/\[Shot \d|integrated_multimodal|overall_soundscape|non_diegetic|At \d\d:\d\d/.test(t))qw.push("Kuyruk modunda alan adı, [Shot] veya zaman damgası olmamalı");
-    if(t.split(/\n\s*\n/).some(function(x){return /\n/.test(x.trim())}))qw.push("Bir klip birden fazla satıra bölünmüş");
+    if(/\[Shot \d|integrated_multimodal|overall_soundscape|non_diegetic|(?:^|[.;:!?]\s+)At \d\d:\d\d[.:]\d{3}\b/.test(t))qw.push("Kuyruk modunda alan adı, [Shot] veya zaman damgası olmamalı");
     if(/\n\s*\n\s*\n/.test(t))qw.push("Klipler arasında tek boş satır olmalı");
+    if(!camHit)qw.push("Seçili kamera hareketi klip metninde geçmiyor");
     return qw;
   }
   var w=[],F=mo===1?["subject_definitions","summary","retention_analysis","detailed_description","overall_soundscape","non_diegetic_music"]:["integrated_multimodal_description","overall_soundscape","non_diegetic_music"];
   F.forEach(function(f){if(t.indexOf(f+":")<0)w.push("Eksik alan: "+f)});
-  if(/\[Shot 1\]\s*At \d/.test(t))w.push("Shot 1'de zaman damgası olmamalı");
-  var re=/\[Shot (\d+)\]\s*At (\d\d):(\d\d\.\d{3})/g,m,prev=0,cnt=0,tot=(t.match(/\[Shot \d+\]/g)||[]).length;
-  while((m=re.exec(t))){var s=+m[2]*60+ +m[3];cnt++;if(s<=prev)w.push("Shot "+m[1]+" zamanı artmıyor");if(dur!=null&&s>=dur)w.push("Shot "+m[1]+" video süresini aşıyor");prev=s}
+  if(/\[Shot 1\]\s*At \d/.test(t))w.push("Shot 1'de zaman damgası olmamalı (Shot 1 her zaman 0'da başlar, 'At ...' yazma)");
+  /* At M:SS, MM:SS, M:SS.d, MM:SS.dd, MM:SS.ddd — hepsi kabul (model her biçimi yazabiliyor) */
+  var re=/\[Shot (\d+)\]\s*At (\d{1,3}):(\d\d(?:\.\d{1,3})?)/g,m,prev=0,cnt=0,tot=(t.match(/\[Shot \d+\]/g)||[]).length;
+  var fmt=function(v){return v.toFixed(3)},dN=dur==null?null:Number(dur),first=true;
+  while((m=re.exec(t))){var s=+m[2]*60 + (+m[3]);cnt++;
+    /* İlk zamanlı shot için "önceki shot" yok; 0.000 ile karşılaştırma yanlış alarm üretiyordu */
+    if(!first){
+      if(s<prev)w.push("Shot "+m[1]+" ("+fmt(s)+" sn) önceki shot'tan önce");
+      else if(s===prev)w.push("Shot "+m[1]+" ("+fmt(s)+" sn) önceki shot ile aynı anda");
+    }
+    first=false;
+    /* Bitiş anı geçerli: 10 sn'lik videonun son karesi 10. saniyedir (özellikle son-shot referansı) */
+    if(dN!=null&&isFinite(dN)&&s>dN+1e-6)w.push("Shot "+m[1]+" ("+fmt(s)+" sn) video süresini aşıyor (süre "+dN+" sn)");
+    prev=s}
   if(tot>1&&cnt<tot-1)w.push("Bazı shotlarda \"At MM:SS.mmm\" zamanı yok");
   (t.match(/<d>[\s\S]*?<\/d>/g)||[]).forEach(function(d){if(!/^<d>\[[^\]]+\]/.test(d))w.push("<d> içinde [Dil] etiketi yok")});
   if(/off-screen voiceover/.test(t)&&!/lips remain completely closed/.test(t))w.push("Voiceover sonrası \"lips remain completely closed\" eksik");
@@ -580,6 +648,7 @@ function lint(t,mo,dur){
     var labs=((t.split("subject_definitions:")[1]||"").split("summary:")[0].match(/<(Subject|Picture|Video|Audio) \d+>/g)||[]);
     labs.filter(function(x,i){return labs.indexOf(x)===i}).forEach(function(l){if(rt.indexOf(l)<0)w.push(l+" retention_analysis'te yok")});
   }
+  if(!camHit)w.push("Seçili kamera hareketi çıktıda geçmiyor");
   return w;
 }
 
@@ -641,11 +710,25 @@ async function llm0(prompt,img,signal,vision){
     else if(r.status===404)hm="Model bulunamadı (404). Model adını kontrol et.";
     throw new Error(hm+(m?": "+(typeof m==="string"?m:JSON.stringify(m)):""));
   }
-  var t="";
-  if(p.k==="gemini"){var ps=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts||[];t=ps.map(function(x){return x.text||""}).join("")}
-  else if(p.k==="groq"||p.k==="lmstudio"||p.k==="openrouter"){t=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||""}
-  else{t=(j&&j.content||[]).map(function(x){return x.text||""}).join("")}
-  if(!t.trim())throw new Error("Boş cevap geldi");
+  var t="",cut=false;
+  if(p.k==="gemini"){
+    var cd=j&&j.candidates&&j.candidates[0],ps=cd&&cd.content&&cd.content.parts||[];
+    t=ps.map(function(x){return x.text||""}).join("");
+    cut=!!(cd&&cd.finishReason==="MAX_TOKENS");
+    if(cd&&cd.finishReason==="SAFETY")throw new Error("Cevap güvenlik filtresine takıldı.");
+  }
+  else if(p.k==="groq"||p.k==="lmstudio"||p.k==="openrouter"){
+    var ch=j&&j.choices&&j.choices[0],ct=ch&&ch.message&&ch.message.content;
+    if(typeof ct!=="string"){if(Array.isArray(ct))t=ct.map(function(x){return typeof x==="string"?x:(x&&x.text)||""}).join("");else t=String(ct==null?"":ct)}
+    else t=ct;
+    cut=!!(ch&&ch.finish_reason==="length");
+  }else{
+    t=(j&&j.content||[]).filter(function(x){return x&&x.type!=="tool_use"}).map(function(x){return x.text||""}).join("");
+    cut=!!(j&&j.stop_reason==="max_tokens");
+  }
+  if(typeof t!=="string")t=String(t||"");
+  if(!t.trim())throw new Error(cut?"Cevap token sınırında kesildi, boş kaldı. Varyasyon sayısını azalt veya tekrar dene.":"Boş cevap geldi");
+  if(cut)t=t.replace(/\s+$/,"")+"\n\n[Kesik: çıktı token sınırına ulaştı, sonu tamamlanmadı. Varyasyon sayısını azaltıp tekrar dene.]";
   return t;
 }
 
@@ -702,7 +785,7 @@ function card(item,inHist){
   if(item.mo===2){d.appendChild(qc);renderFR();d.appendChild(fb)}
   var w=[];
   function showL(){
-    w=lint(item.text,item.mo,item.dur);
+    w=lint(item.text,item.mo,item.dur,item.camk);
     if(item.mo===2&&item.fr){var nc=item.text.split(/\n\s*\n/).filter(Boolean).length,nf=item.fr.split(/\n\s*\n/).filter(Boolean).length;if(nc!==nf)w.push("Kare sayısı ("+nf+") klip sayısı ("+nc+") ile uyuşmuyor")}
     lt.className="lint"+(w.length?" w":"");
     lt.textContent=w.length?"⚠ "+w.join(" · "):"✓ Format kontrolü temiz";
@@ -740,7 +823,7 @@ function card(item,inHist){
       var t=await llm("Here is a video prompt:\n\n"+item.text+"\n\nDescribe the very last frame of the resulting video in 2-4 plain English sentences: subjects (appearance, clothing, pose, expression), position, setting, lighting, framing, visual style, so a continuation scene can start from it. Output only the description.");
       st.mo=0;st.k=1;
       chips("modes",MODES,"mo",function(x){return x},upd);chips("kinds",KINDS,"k",function(x){return x[1]},upd);upd();
-      $("f1").value=t.trim();$("idea").value="";tab(1);
+      $("f1").value=t.trim();$("idea").value="";tab(1);saveDraft();
       $("msg").textContent="Önceki sahnenin son karesi, yeni sahnenin ilk karesi (I2VA) olarak dolduruldu. Yeni sahne fikrini yaz.";
       $("idea").focus();window.scrollTo(0,0);
     }catch(e){showErr(ms,"Hata: ",e,function(){nx.onclick()});box.className="edit open"}
@@ -766,12 +849,6 @@ $("clr").onclick=function(){
   b.dataset.s="1";b.textContent="Emin misin? Tekrar dokun";
   setTimeout(function(){b.dataset.s="";b.textContent="Geçmişi temizle"},3000);
 };
-
-function tab(n){
-  ["v1","v2","v3"].forEach(function(v,i){$(v).className=(i+1===n)?"":"hid";$("t"+(i+1)).className="tab"+(i+1===n?" on":"")});
-  if(n===2)renderHist();
-}
-$("t1").onclick=function(){tab(1)};$("t2").onclick=function(){tab(2)};$("t3").onclick=function(){tab(3)};
 $("t2").textContent="Geçmiş ("+hist.length+")";
 
 function showProv(){
@@ -814,7 +891,7 @@ function pick(cb,btn){
       var imgObj={m:"image/jpeg",d:c.toDataURL("image/jpeg",0.85).split(",")[1]};
       var desc="Describe this image for a video prompt in 2-4 plain English sentences: subjects (age range, hair, clothing, expression), setting, composition and framing, lighting, color palette, visual style. Output only the description.";
       async function run(){
-        try{var t=await llm(desc,imgObj,true);cb(t.trim());msg.textContent=""}
+        try{var t=await llm(desc,imgObj,true);cb(t.trim());saveDraft();msg.textContent=""}
         catch(e){showErr(msg,"Görsel analizi hatası: ",e,function(){run()})}
         btn.textContent=o;btn.disabled=false;
       }
@@ -826,7 +903,9 @@ function pick(cb,btn){
   document.body.appendChild(i);
   var done=function(){if(i.parentNode)i.parentNode.removeChild(i)};
   i.addEventListener("change",function(){setTimeout(done,0)});
-  i.click();setTimeout(done,300000);
+  i.click();
+  var foc=function(){setTimeout(done,500);window.removeEventListener("focus",foc)};
+  window.addEventListener("focus",foc);
 }
 $("im1").onclick=function(){pick(function(t){$("f1").value=t},$("im1"))};
 $("im2").onclick=function(){pick(function(t){$("f2").value=t},$("im2"))};
@@ -856,15 +935,17 @@ $("csv").onclick=function(){
 $("cdl").onclick=function(){chars=chars.filter(function(c,i){return !csel[i]});jset(CHK,chars);csel={};renderChars();saveDraft()};
 renderChars();
 
-function split(text){return text.split(/^\s*={3,}\s*$/m).map(function(s){return s.trim()}).filter(Boolean)}
+function split(text){return text.split(/^[ \t]*={3,}[ \t]*$/m).map(function(s){return s.trim()}).filter(Boolean)}
 var go=$("go"),msg=$("msg");
 async function goImage(){
   var idea=$("idea").value.trim();
   if(!idea){msg.textContent="Önce bir fikir yaz.";return}
   if(needKey()){msg.textContent=NOKEY;return}
   var n=COUNTS[st.c],ar=IARS[st.a],fixed=$("fixed").value.trim(),sty=STYIL[st.si],styleRules=styleSystemRules(sty),mdl=IMODELS[st.m];
+  var sysPrompt=mdl[2]===1?SYSK:mdl[2]===2?SYSQWEN:SYS;
+  var arLine=mdl[2]===2?"\nAspect ratio (use only for orientation words; never write the ratio, resolution or pixel count in the text): "+ar:"\nAspect ratio: "+ar;
   var cht=chars.filter(function(c,k){return csel[k]}).map(function(c){return c.n+": "+c.d}).join("\n");
-  var prompt=(mdl[2]?SYSK:SYS)+"\n\nTarget model: "+mdl[1]+"\nAspect ratio: "+ar+"\n\nAutomatic style system rules: "+styleRules+
+  var prompt=sysPrompt+"\n\nTarget model: "+mdl[1]+arLine+"\n\nAutomatic style system rules: "+styleRules+
     (sty[1]?"\nStyle template to apply throughout (lighting, palette, mood, grade): "+sty[1]:"")+
     (sty[2]!=="R"?"\nIMPORTANT: this is NOT photorealistic. Ignore any wording in the structure about photorealism, camera lens, film grade or real skin texture. Describe everything in the medium of the chosen style (painted, drawn or animated), and replace lens and camera details with composition and rendering details. Do not use the words photorealistic, photograph, 35mm or 8k.":"")+
     (cht?"\nRecurring characters (copy each description identically):\n"+cht:"")+
@@ -890,12 +971,12 @@ async function goImage(){
 async function goQueue(){
   var idea=$("idea").value.trim();
   var plan=$("sp").value.split("\n").map(function(x){return x.trim()}).filter(Boolean).map(function(x){
-    var m=x.match(/^(\d+(?:[.,]\d+)?)\s*(?:saniye|sec|sn|s)\b\s*[:|\-–.]?\s*([\s\S]*)$/i);
+    var m=x.match(/^(\d+(?:[.,]\d+)?)\s*(?:saniye|sec|sn|s)\b\s*[:\-–.]?\s*([\s\S]*)$/i);
     return m?{t:m[2],d:parseFloat(m[1].replace(",","."))}:{t:x,d:null};
   });
   if(!idea&&!plan.length){msg.textContent="Ortak tanım veya klip planı yaz.";return}
   if(needKey()){msg.textContent=NOKEY;return}
-  var qd=QD[st.qd],ns=SHOTS[st.sh],n=COUNTS[st.c],sty=STY[st.sy],styleRules=styleSystemRules(sty),cam=CAMS[st.cm][1],camExp=CAMS[st.cm][2]==="e",dl=DLG[st.dl][1],fixed=$("fixed").value.trim(),suf=$("qs").value.trim();
+  var qd=QD[st.qd],ns=SHOTS[st.sh],n=COUNTS[st.c],sty=STY[st.sy],styleRules=styleSystemRules(sty),camC=CAMS[st.cm],cam=camC[1],camKw=camC[4]||[],camLbl=camC[0],dl=DLG[st.dl][1],fixed=$("fixed").value.trim(),suf=$("qs").value.trim();
   var cht=chars.filter(function(c,i){return csel[i]}).map(function(c){return c.n+": "+c.d}).join("\n");
   var fon=st.qf===1,far=QAR[st.qa];
   var frameRules="Start-frame prompts: after the clips, also write one Krea 2 start-frame image prompt for each clip, same order and same count. Krea 2 only reads a reference image as direction and then generates a fresh image, so each frame prompt must describe the whole target frame itself. Write every frame prompt by the following guide, which replaces any other ordering:\n"+SYSK+"\nAdditional frame rules: reuse the exact identity and clothing wording from the clip; the frame is the frozen first moment of the clip, so describe the pose, not motion, with no camera-movement words, sound or duration; state the aspect ratio in words, e.g. 'vertical "+far+" composition'. No labels. "+
@@ -912,7 +993,7 @@ async function goQueue(){
     (suf?"\nAfter that, end every paragraph with this exact sentence: "+suf:"")+
     (sty[1]?"\nStyle to apply in every clip: "+sty[1]:"")+
     (sty[2]!=="R"?"\nIMPORTANT: this is NOT live-action. Describe everything in the chosen medium (animated, drawn, painted or clay); do not use the words live-action, photorealistic, photograph or real skin pores; camera moves stay as a virtual camera.":"")+
-    (cam?"\nPreferred camera motion"+(camExp?" (experimental combination; if ambiguous, prioritize one clear primary move)":"")+": "+cam+".":"")+
+    (cam?"\nPreferred camera motion"+camHint(camC)+": "+cam+".":"")+
     "\nDialogue: "+(dl?"include spoken lines in "+dl+" using <d>["+dl+"] ...</d>; lines the user wrote in quotes must be kept verbatim.":"none; no speakers.")+
     "\nMusic: "+(st.mu===1?"do not mention any music.":"mention fitting background music briefly at the end of the sound part.")+
     (cht?"\nRecurring characters (copy each description identically in every clip where they appear):\n"+cht:"")+
@@ -925,10 +1006,18 @@ async function goQueue(){
   msg.textContent="Üretiliyor…";
   try{
     var parts=split(await llm(prompt));
-    var cleanP=function(txt){return txt.replace(/\r/g,"").split(/\n\s*\n/).map(function(x){return x.replace(/^\s*(?:clip|shot|klip|frame|kare)\s*\d+\s*[:.\-–)]\s*/i,"").replace(/\s*\n\s*/g," ").trim()}).filter(Boolean)};
+    var cleanP=function(txt){return txt.replace(/\r/g,"").split(/\n\s*\n/).map(function(x){return x.replace(/^\s*(?:clip|shot|klip|frame|kare)\s*\d+\s*[:.\-–)]\s*/i,"").replace(/[ \t]*\n[ \t]*/g," ").trim()}).filter(Boolean)};
+    /* Kare promptları: önce boş-satır bloklarına böl; tek blok kaldıysa her satırı ayrı kareye ayır
+       (model kareleri boş satırsız alt alta yazabilir) */
+    var cleanF=function(txt){
+      var blk=cleanP(txt);
+      if(blk.length>1)return blk;
+      var per=txt.replace(/\r/g,"").split(/\n/).map(function(x){return x.replace(/^\s*(?:frame|kare)\s*\d+\s*[:.\-–)]\s*/i,"").trim()}).filter(Boolean);
+      return per.length?per:blk;
+    };
     var items=parts.map(function(p,i){
-      var hv=p.split(/^\s*#{3,}\s*$/m),paras=cleanP(hv[0]),frs=hv[1]?cleanP(hv[1]):[];
-      return{id:Date.now()+"-"+i,text:paras.join("\n\n"),fr:frs.join("\n\n"),idea:idea||plan.length+" klip",model:"Kuyruk · "+paras.length+" klip"+(frs.length?" + kare":"")+(sty[1]?" · "+sty[0]:""),mo:2,dur:null};
+      var hv=p.split(/^[ \t]*#{3,}[ \t]*$/m),paras=cleanP(hv[0]),frs=hv[1]?cleanF(hv[1]):[];
+      return{id:Date.now()+"-"+i,text:paras.join("\n\n"),fr:frs.join("\n\n"),idea:idea||plan.length+" klip",model:"Kuyruk · "+paras.length+" klip"+(frs.length?" + kare":"")+(sty[1]?" · "+sty[0]:""),mo:2,dur:null,cam:camLbl,camk:camKw};
     });
     var bad=fon&&items.some(function(it){return it.fr.split(/\n\s*\n/).filter(Boolean).length!==it.text.split(/\n\s*\n/).length});
     items.slice().reverse().forEach(function(it){hist.unshift(it)});
@@ -951,7 +1040,7 @@ go.onclick=async function(){
   if(ref&&!rf){msg.textContent="En az bir referans satırı ekle.";return}
   if(!ref&&k!=="T2VA"&&!f1){msg.textContent="Kare açıklamasını yaz.";return}
   if(!ref&&k==="FL2VA"&&!f2){msg.textContent="Son kare açıklamasını da yaz.";return}
-  var n=COUNTS[st.c],dur=DURS[st.d],ns=nsh(),sty=STY[st.sy],styleRules=styleSystemRules(sty),cam=CAMS[st.cm][1],camExp=CAMS[st.cm][2]==="e",dl=DLG[st.dl][1],fixed=$("fixed").value.trim();
+  var n=COUNTS[st.c],dur=DURS[st.d],ns=nsh(),sty=STY[st.sy],styleRules=styleSystemRules(sty),camC=CAMS[st.cm],cam=camC[1],camKw=camC[4]||[],camLbl=camC[0],dl=DLG[st.dl][1],fixed=$("fixed").value.trim();
   var one=!ref&&(k==="FL2VA"||k==="L2VA");
   var plan=$("sp").value.split("\n").filter(function(x){return x.trim()}).map(function(x,i){return (i+1)+") "+x.trim()}).join("\n");
   var cht=chars.filter(function(c,i){return csel[i]}).map(function(c){return c.n+": "+c.d}).join("\n");
@@ -962,7 +1051,7 @@ go.onclick=async function(){
     "\nShots: "+(typeof ns==="number"?"exactly "+ns:one?"exactly 1":"choose what fits the duration")+"."+
     (sty[1]?"\nStyle to apply: "+sty[1]:"")+
     (sty[2]!=="R"?"\nIMPORTANT: this is NOT live-action. Describe everything in the chosen medium (animated, drawn, painted or clay) and open Shot 1 with that medium instead of 'Live-action'. Do not use the words live-action, photorealistic, photograph or real skin pores; camera moves stay as a virtual camera.":"")+
-    (cam?"\nPreferred camera motion"+(camExp?" (experimental combination; if ambiguous, prioritize one clear primary move)":"")+": "+cam+".":"")+
+    (cam?"\nPreferred camera motion"+camHint(camC)+": "+cam+".":"")+
     "\nDialogue: "+(dl?"include spoken lines in "+dl+" using <d>["+dl+"] ...</d>; lines the user wrote in quotes must be kept verbatim.":"none; no speakers, no (Sx).")+
     "\nnon_diegetic_music: "+(st.mu===1?"write N/A.":"write a fitting score.")+
     (plan?"\nShot plan (follow in order, one shot per line; expand each into a detailed shot and keep any times, camera moves or lines the user gave):\n"+plan:"")+
@@ -977,7 +1066,7 @@ go.onclick=async function(){
   try{
     var parts=split(await llm(prompt));
     var lab=ref?"Referans":"Base · "+k;
-    var items=parts.map(function(p,i){return{id:Date.now()+"-"+i,text:(ins?ins+"\n\n":"")+p,idea:idea,model:lab+" · "+dur+" sn"+(sty[1]?" · "+sty[0]:""),mo:mo,dur:dur}});
+    var items=parts.map(function(p,i){return{id:Date.now()+"-"+i,text:(ins?ins+"\n\n":"")+p,idea:idea,model:lab+" · "+dur+" sn"+(sty[1]?" · "+sty[0]:""),mo:mo,dur:dur,cam:camLbl,camk:camKw}});
     items.slice().reverse().forEach(function(it){hist.unshift(it)});
     saveH();
     var out=$("out");out.textContent="";
